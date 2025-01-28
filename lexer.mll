@@ -28,7 +28,7 @@ rule token = parse
   | "let"         { LET }
   | "input"       { INPUT }
   | "goto"        { GOTO }
+  | "end"        { END }
   | ident as x    { IDENT(x) }
   | integer as x  { INTEGER(int_of_string x) }
   | eol           { EOL }
-  | "end"         { END }

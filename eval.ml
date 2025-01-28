@@ -16,14 +16,18 @@ let rec eval_expr e =
   | Lt(left, right) -> if eval_expr left < eval_expr right then 1 else 0
   | Gt(left, right) -> if eval_expr left > eval_expr right then 1 else 0
 
-let rec eval_instr i =
+let rec eval_instr s i =
   match i with
   | Print(l) -> List.iter (fun x -> print_int (eval_expr x); print_string " " ) l; print_newline()
-  | Rem(text) -> Printf.printf "(* %s *)\n" text; ()
+  | Rem(_) -> (); print_newline()
   | Let(id,e) -> let value = eval_expr e in Printf.printf "%s = %d\n" id value
   | Input(id) -> Printf.printf "veuillez saisir une valeur à %s: " id; let value = read_int() in Printf.printf "%s = %d\n" id value
   | Goto(i) -> Printf.printf "goto %d\n" i
-  (* | Goto (label) ->
+  (*| End -> Printf.printf "End\n"; exec 0*)
+  | End ->
+    Printf.printf "Program terminated.\n";
+    exit 0
+  (*| Goto (label) ->
     (* Rechercher l'instruction avec le label correspondant *)
     let target_pc = List.findi (fun i stmt ->
       match stmt with
@@ -33,14 +37,13 @@ let rec eval_instr i =
     match target_pc with
     | Some pc -> execute_program program env pc
     | None -> failwith ("Label " ^ string_of_int label ^ " not found") *)
-    | End -> Printf.printf "Program terminated.\n"; ()
 
 let eval_program program =
   let rec exec pc =
     match List.nth_opt program pc with
-    | None -> () (* Fin du programme *)
-    | Some (_, instr) ->
-      eval_instr instr;
+    | None -> ()
+    | Some (s, instr) ->
+      eval_instr s instr;
       exec (pc + 1)
   in
   exec 0
