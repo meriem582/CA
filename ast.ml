@@ -19,7 +19,6 @@ type instr  =
   | Let of string * expr
   | Input of string
   | Goto of int
-  | End
 
 type line = int * instr
 

@@ -16,6 +16,8 @@ let rec eval_expr e =
   | Lt(left, right) -> if eval_expr left < eval_expr right then 1 else 0
   | Gt(left, right) -> if eval_expr left > eval_expr right then 1 else 0
 
+(*let env = Hashtbl.create 10   Table pour stocker les variables *)
+
 let rec eval_instr s i =
   match i with
   | Print(l) -> List.iter (fun x -> print_int (eval_expr x); print_string " " ) l; print_newline()
@@ -24,9 +26,9 @@ let rec eval_instr s i =
   | Input(id) -> Printf.printf "veuillez saisir une valeur à %s: " id; let value = read_int() in Printf.printf "%s = %d\n" id value
   | Goto(i) -> Printf.printf "goto %d\n" i
   (*| End -> Printf.printf "End\n"; exec 0*)
-  | End ->
+  (* | End ->
     Printf.printf "Program terminated.\n";
-    exit 0
+    exit 0 *)
   (*| Goto (label) ->
     (* Rechercher l'instruction avec le label correspondant *)
     let target_pc = List.findi (fun i stmt ->

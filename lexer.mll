@@ -1,5 +1,6 @@
 {
   open Parser
+  exception Eof
 }
 
 let integer = ['0'-'9']+
@@ -20,7 +21,7 @@ rule token = parse
   | "and"         { AND }
   | "or"          { OR }
   | "not"         { NOT }
-  | "print"       { PRINT }
+  | "print"       { Printf.printf "LEXER : instruction print détectée\n" ;  PRINT }
   | "<"           { LT }
   | ">"           { GT }
   | "="           { EQ }
@@ -28,7 +29,7 @@ rule token = parse
   | "let"         { LET }
   | "input"       { INPUT }
   | "goto"        { GOTO }
-  | "end"        { END }
   | ident as x    { IDENT(x) }
   | integer as x  { INTEGER(int_of_string x) }
-  | eol           { EOL }
+  | eol           { Printf.printf "LEXER : fin de ligne \n"; EOL }
+  | eof           { Printf.printf "LEXER : fin de fichier \n"; raise Eof }

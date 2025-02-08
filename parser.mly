@@ -5,7 +5,7 @@ open Ast
 %left PLUS MINUS
 %left MUL DIV AND OR NOT
 %nonassoc LPAREN RPAREN
-%token MUL, PLUS, LPAREN, RPAREN, EOL, MINUS, DIV, AND, OR, NOT, PRINT, SEMICOLON, LT, GT, EQ, LET, INPUT, GOTO, END
+%token MUL, PLUS, LPAREN, RPAREN,Eof, EOL, MINUS, DIV, AND, OR, NOT, PRINT, SEMICOLON, LT, GT, EQ, LET, INPUT, GOTO, END
 %token <string> REM
 %token<int> INTEGER
 %token <string> IDENT
@@ -19,16 +19,16 @@ open Ast
 %%
 
 calc:
-  | line_list { $1 }
+  | line_list Eof { $1 }
 ;
 
 line_list:
-  | line EOL { [$1] }
-  | line_list EOL line { $3 :: $1 }
+  | line { [$1] }
+  | line_list line { $2 :: $1 }
 ;
 
 line:
-  | INTEGER instr  { ($1, $2) }
+  | INTEGER instr EOL { ($1, $2) }
 ;
 
 instr : PRINT seq { Print($2) } 
@@ -36,7 +36,7 @@ instr : PRINT seq { Print($2) }
      | LET IDENT EQ expr { Let($2, $4) }
      | INPUT IDENT { Input($2) }
      | GOTO INTEGER { Goto($2) }
-     | END { End }
+    //  | END { End }
 ;
 
 seq : {[]}

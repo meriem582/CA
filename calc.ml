@@ -1,4 +1,15 @@
 let _ =
-  let lexbuf = Lexing.from_channel stdin in
-  let ast = Parser.calc Lexer.token lexbuf in
-  Eval.eval_program ast
+  try 
+    let filename = Sys.argv.(1) in
+    Printf.printf "Ouverture du fichier : %s\n" filename; (* Débogage *)
+    let f = open_in filename in
+    let lexbuf = Lexing.from_channel f in
+    Printf.printf "Fichier ouvert avec succès\n"; (* Débogage *)
+    let ast = Parser.calc Lexer.token lexbuf in
+    Printf.printf "AST généré avec succès\n"; (* Débogage *)
+    Eval.eval_program ast;
+    Printf.printf "Évaluation terminée\n" (* Débogage *)
+  with  
+  | Lexer.Eof -> Printf.printf "Fin du fichier atteinte\n"; exit 0
+  | Sys_error msg -> Printf.eprintf "Erreur système : %s\n" msg; exit 1
+  | Invalid_argument _ -> Printf.eprintf "Erreur : Aucun fichier spécifié\n"; exit 1
