@@ -21,7 +21,7 @@ rule token = parse
   | "and"         { AND }
   | "or"          { OR }
   | "not"         { NOT }
-  | "print"       { Printf.printf "LEXER : instruction print détectée\n" ;  PRINT }
+  | "print"       { PRINT }
   | "<"           { LT }
   | ">"           { GT }
   | "="           { EQ }
@@ -29,6 +29,7 @@ rule token = parse
   | "let"         { Printf.printf "LEXER : LET \n"; LET }
   | "input"       { INPUT }
   | "goto"        { GOTO }
+  | "end"         { Printf.printf "LEXER : instruction END détectée\n" ; END }
   | integer as x  { INTEGER(int_of_string x) }
   | ident as x    { IDENT(x) }
   | eol           { EOL }

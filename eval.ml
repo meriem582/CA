@@ -21,15 +21,13 @@ let rec eval_expr e =
 let rec eval_instr s i =
   match i with
   | Print(l) -> List.iter (fun x -> print_int (eval_expr x); print_string " " ) l; print_newline()
-  | Rem(_) -> (); 
+  | Rem(_) -> (); print_newline()
   | Let(id,e) -> let value = eval_expr e in Printf.printf "%s = %d\n" id value
   | Input(id) -> Printf.printf "veuillez saisir une valeur à %s: " id; let value = read_int() in Printf.printf "%s = %d\n" id value
   | Goto(i) -> Printf.printf "goto %d\n" i
   (*| End -> Printf.printf "End\n"; exec 0*)
-  (* | End ->
-    Printf.printf "Program terminated.\n";
-    exit 0 *)
-  (*| Goto (label) ->
+  | End -> Printf.printf "Program terminated.\n"; exit 0 
+  (* | Goto (label) ->
     (* Rechercher l'instruction avec le label correspondant *)
     let target_pc = List.findi (fun i stmt ->
       match stmt with
@@ -45,6 +43,7 @@ let eval_program program =
     match List.nth_opt program pc with
     | None -> ()
     | Some (s, instr) ->
+      Printf.printf "Exécution de la ligne %d :" s;
       eval_instr s instr;
       exec (pc + 1)
   in

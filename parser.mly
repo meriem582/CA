@@ -36,7 +36,7 @@ instr : PRINT seq { Printf.printf "PARSER : instruction print traitée\n";  Prin
      | LET IDENT EQ expr { Printf.printf "PARSER : instruction LET traitée\n";  Let($2, $4) }
      | INPUT IDENT { Input($2) }
      | GOTO INTEGER { Goto($2) }
-    //  | END { End }
+     | END {  Printf.printf "PARSER : instruction END traitée\n";  End }
 ;
 
 seq : {[]}
