@@ -38,8 +38,8 @@ instr : PRINT seq { Printf.printf "PARSER : instruction print traitée\n";  Prin
      | GOTO INTEGER { Goto($2) }
      | END {  Printf.printf "PARSER : instruction END traitée\n";  End }
      | IF expr GOTO INTEGER { Printf.printf "PARSER : instruction IFG traitée\n"; If($2,$4) }
-    //  | GOSUB INTEGER  { Printf.printf "PARSER : instruction GOSUB traitée\n"; Gosub ($2) }
-    //  | RETURN { Printf.printf "PARSER : instruction RETURN traitée\n"; Return }
+     | GOSUB INTEGER  { Printf.printf "PARSER : instruction GOSUB traitée\n"; Gosub ($2) }
+     | RETURN { Printf.printf "PARSER : instruction RETURN traitée\n"; Return }
 ;
 
 seq : {[]}

@@ -21,8 +21,8 @@ type instr  =
   | Goto of int
   | End
   | If of expr * int
-  (* | Gosub of int
-  | Return *)
+  | Gosub of int
+  | Return
 
 type line = int * instr
 
