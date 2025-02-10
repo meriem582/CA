@@ -8,8 +8,14 @@
 
 ## 📌 - Exécution des programmes
 
-Pour exécuter le programme vous devez tapper les commandes suivantes
+Pour exécuter le programme du mini basic vous devez tapper les commandes suivantes
 ```
 ./compile.sh
 ./calc test.txt
+```
+
+Pour exécuter le programme du minizam vous devez tapper les commandes suivantes
+```
+make
+./run_tests.pl
 ```
