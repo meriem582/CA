@@ -1,5 +1,8 @@
 open Ast
 
+module StringMap = Map.Make(String)
+type env = int StringMap.t
+
 let rec eval_expr e =
   match e with
   | Add(left, right) -> eval_expr left + eval_expr right
@@ -18,33 +21,61 @@ let rec eval_expr e =
 
 (*let env = Hashtbl.create 10   Table pour stocker les variables *)
 
-let rec eval_instr s i =
+let rec eval_instr program_map i =
   match i with
-  | Print(l) -> List.iter (fun x -> print_int (eval_expr x); print_string " " ) l; print_newline()
-  | Rem(_) -> (); print_newline()
-  | Let(id,e) -> let value = eval_expr e in Printf.printf "%s = %d\n" id value
-  | Input(id) -> Printf.printf "veuillez saisir une valeur à %s: " id; let value = read_int() in Printf.printf "%s = %d\n" id value
-  | Goto(i) -> Printf.printf "goto %d\n" i
-  (*| End -> Printf.printf "End\n"; exec 0*)
-  | End -> Printf.printf "Program terminated.\n"; exit 0 
-  (* | Goto (label) ->
-    (* Rechercher l'instruction avec le label correspondant *)
-    let target_pc = List.findi (fun i stmt ->
-      match stmt with
-      | Goto lbl -> lbl = label
-      | _ -> false
-    ) program in
-    match target_pc with
-    | Some pc -> execute_program program env pc
-    | None -> failwith ("Label " ^ string_of_int label ^ " not found") *)
+  | Print(l) -> 
+      List.iter (fun x -> print_int (eval_expr x); print_string " " ) l; 
+      print_newline()
+  | Rem(_) -> 
+      print_newline()
+  | Let(id, e) -> 
+      let value = eval_expr e in 
+      Printf.printf "%s = %d\n" id value
+  | Input(id) -> 
+      Printf.printf "Veuillez saisir une valeur pour %s: " id; 
+      let value = read_int() in 
+      Printf.printf "%s = %d\n" id value
+  | Goto(line_number) -> 
+      Printf.printf "Goto %d\n" line_number;
+      (* Exécute l'instruction de la ligne cible sans modifier l'ordre d'exécution *)
+      (match Hashtbl.find_opt program_map line_number with
+       | Some instr -> 
+           Printf.printf "Exécution de la ligne %d (Goto):\n" line_number;
+           eval_instr program_map instr
+       | None -> 
+           Printf.printf "Ligne %d inexistante, aucune instruction exécutée.\n" line_number)
+  | End -> 
+      Printf.printf "Program terminated.\n"; 
+      exit 0
+
+
 
 let eval_program program =
-  let rec exec pc =
-    match List.nth_opt program pc with
-    | None -> ()
-    | Some (s, instr) ->
-      Printf.printf "Exécution de la ligne %d :" s;
-      eval_instr s instr;
-      exec (pc + 1)
-  in
-  exec 0
+  (* Crée une table de hachage pour accéder aux instructions par numéro de ligne *)
+  let program_map = Hashtbl.create (List.length program) in
+  List.iter (fun (line_num, instr) -> Hashtbl.add program_map line_num instr) program;
+        
+          let rec exec pc =
+            match Hashtbl.find_opt program_map pc with
+            | None -> Printf.printf "Fin du programme.\n"
+            | Some instr ->
+              Printf.printf "Exécution de la ligne %d :\n" pc;
+              eval_instr program_map instr;
+              exec (pc + 1)
+          in
+          exec 1  (* Commence à la ligne 1 *)
+          let eval_program program =
+            (* Crée une table de hachage pour accéder aux instructions par numéro de ligne *)
+            let program_map = Hashtbl.create (List.length program) in
+            List.iter (fun (line_num, instr) -> Hashtbl.add program_map line_num instr) program;
+          
+            let rec exec pc =
+              match Hashtbl.find_opt program_map pc with
+              | None -> Printf.printf "Fin du programme.\n"
+              | Some instr ->
+                Printf.printf "Exécution de la ligne %d :\n" pc;
+                eval_instr program_map instr;
+                exec (pc + 1)
+            in
+            exec 1  (* Commence à la ligne 1 *)
+                
