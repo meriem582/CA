@@ -1,6 +1,6 @@
 {
   open Parser
-  exception Eof
+  exception EOF
 }
 
 let integer = ['0'-'9']+
@@ -26,10 +26,10 @@ rule token = parse
   | ">"           { GT }
   | "="           { EQ }
   | "rem"         { REM (Lexing.lexeme lexbuf) }  
-  | "let"         { LET }
+  | "let"         { Printf.printf "LEXER : LET \n"; LET }
   | "input"       { INPUT }
   | "goto"        { GOTO }
-  | ident as x    { IDENT(x) }
   | integer as x  { INTEGER(int_of_string x) }
-  | eol           { Printf.printf "LEXER : fin de ligne \n"; EOL }
-  | eof           { Printf.printf "LEXER : fin de fichier \n"; raise Eof }
+  | ident as x    { IDENT(x) }
+  | eol           { EOL }
+  | eof           {  EOF }

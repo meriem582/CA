@@ -1,4 +1,5 @@
 type token =
+  | EOF
   | PLUS
   | MINUS
   | MUL
@@ -8,7 +9,6 @@ type token =
   | NOT
   | LPAREN
   | RPAREN
-  | Eof
   | EOL
   | PRINT
   | SEMICOLON

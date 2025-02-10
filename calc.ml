@@ -10,6 +10,7 @@ let _ =
     Eval.eval_program ast;
     Printf.printf "Évaluation terminée\n" (* Débogage *)
   with  
-  | Lexer.Eof -> Printf.printf "Fin du fichier atteinte\n"; exit 0
+  | Lexer.EOF -> Printf.printf "Fin du fichier atteinte\n"; exit 0
+  (* | Lexer.Eof -> Printf.printf "Fin du fichier atteinte\n"; () *)
   | Sys_error msg -> Printf.eprintf "Erreur système : %s\n" msg; exit 1
   | Invalid_argument _ -> Printf.eprintf "Erreur : Aucun fichier spécifié\n"; exit 1

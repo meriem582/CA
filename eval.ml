@@ -21,7 +21,7 @@ let rec eval_expr e =
 let rec eval_instr s i =
   match i with
   | Print(l) -> List.iter (fun x -> print_int (eval_expr x); print_string " " ) l; print_newline()
-  | Rem(_) -> (); print_newline()
+  | Rem(_) -> (); 
   | Let(id,e) -> let value = eval_expr e in Printf.printf "%s = %d\n" id value
   | Input(id) -> Printf.printf "veuillez saisir une valeur à %s: " id; let value = read_int() in Printf.printf "%s = %d\n" id value
   | Goto(i) -> Printf.printf "goto %d\n" i

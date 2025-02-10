@@ -1,11 +1,11 @@
 %{
 open Ast
 %}
-
+%token EOF
 %left PLUS MINUS
 %left MUL DIV AND OR NOT
 %nonassoc LPAREN RPAREN
-%token MUL, PLUS, LPAREN, RPAREN,Eof, EOL, MINUS, DIV, AND, OR, NOT, PRINT, SEMICOLON, LT, GT, EQ, LET, INPUT, GOTO, END
+%token MUL, PLUS, LPAREN, RPAREN, EOL, MINUS, DIV, AND, OR, NOT, PRINT, SEMICOLON, LT, GT, EQ, LET, INPUT, GOTO, END
 %token <string> REM
 %token<int> INTEGER
 %token <string> IDENT
@@ -19,21 +19,21 @@ open Ast
 %%
 
 calc:
-  | line_list Eof { $1 }
+  | line_list EOF { $1 }
 ;
 
 line_list:
   | line { [$1] }
-  | line_list line { $2 :: $1 }
+  | line line_list { $1 :: $2 }
 ;
 
 line:
   | INTEGER instr EOL { ($1, $2) }
 ;
 
-instr : PRINT seq { Print($2) } 
-     | REM IDENT { Rem($2) } 
-     | LET IDENT EQ expr { Let($2, $4) }
+instr : PRINT seq { Printf.printf "PARSER : instruction print traitée\n";  Print($2) } 
+     | REM IDENT { Printf.printf "PARSER : instruction REM traitée\n";  Rem($2) } 
+     | LET IDENT EQ expr { Printf.printf "PARSER : instruction LET traitée\n";  Let($2, $4) }
      | INPUT IDENT { Input($2) }
      | GOTO INTEGER { Goto($2) }
     //  | END { End }
