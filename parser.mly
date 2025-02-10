@@ -19,7 +19,7 @@ open Ast
 %%
 
 calc:
-  | line_list EOF { $1 }
+  | line_list EOF { List.mapi (fun i instr -> (i + 1, instr)) $1 }
 ;
 
 line_list:
@@ -28,7 +28,7 @@ line_list:
 ;
 
 line:
-  | INTEGER instr EOL { ($1, $2) }
+  | instr EOL { $1 }
 ;
 
 instr : PRINT seq { Printf.printf "PARSER : instruction print traitée\n";  Print($2) } 
