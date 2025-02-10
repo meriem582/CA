@@ -11,5 +11,5 @@
 Pour exécuter le programme vous devez tapper les commandes suivantes
 ```
 ./compile.sh
-./calc
+./calc test.txt
 ```
