@@ -8,6 +8,8 @@ open Ast
 %token MUL, PLUS, LPAREN, RPAREN, EOL, MINUS, DIV, AND, OR, NOT, PRINT, SEMICOLON, LT, GT, EQ, LET, INPUT, GOTO, END, IF, GOSUB, RETURN
 %token <string> REM
 %token<int> INTEGER
+%token <float> FLOAT
+%token <string> STRING
 %token <string> IDENT
 %start calc
 %type <Ast.program> calc
@@ -32,7 +34,7 @@ line:
 ;
 
 instr : PRINT seq { Printf.printf "PARSER : instruction print traitée\n";  Print($2) } 
-     | REM IDENT { Printf.printf "PARSER : instruction REM traitée\n";  Rem($2) } 
+     | REM STRING { Printf.printf "PARSER : instruction REM traitée\n";  Rem($2) } 
      | LET IDENT EQ expr { Printf.printf "PARSER : instruction LET traitée\n";  Let($2, $4) }
      | INPUT IDENT { Input($2) }
      | GOTO INTEGER { Goto($2) }
@@ -63,6 +65,8 @@ term : term MUL term { Mul($1, $3) }
      | factor  { $1 } ;
 
 factor : INTEGER { Integer($1) }
+       | FLOAT { Float($1) } 
+       | STRING { String($1) }
        | LPAREN expr RPAREN { $2 } 
        | MINUS expr { Neg($2) }
        | PLUS expr { Pos($2) };

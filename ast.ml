@@ -4,6 +4,8 @@ type expr =
   | Sub of expr * expr
   | Div of expr * expr 
   | Integer of int
+  | Float of float
+  | String of string 
   | Neg of expr
   | Pos of expr
   | And of expr * expr
