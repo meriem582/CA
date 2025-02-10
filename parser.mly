@@ -5,7 +5,7 @@ open Ast
 %left PLUS MINUS
 %left MUL DIV AND OR NOT
 %nonassoc LPAREN RPAREN
-%token MUL, PLUS, LPAREN, RPAREN, EOL, MINUS, DIV, AND, OR, NOT, PRINT, SEMICOLON, LT, GT, EQ, LET, INPUT, GOTO, END
+%token MUL, PLUS, LPAREN, RPAREN, EOL, MINUS, DIV, AND, OR, NOT, PRINT, SEMICOLON, LT, GT, EQ, LET, INPUT, GOTO, END, IF, GOSUB, RETURN
 %token <string> REM
 %token<int> INTEGER
 %token <string> IDENT
@@ -37,6 +37,9 @@ instr : PRINT seq { Printf.printf "PARSER : instruction print traitée\n";  Prin
      | INPUT IDENT { Input($2) }
      | GOTO INTEGER { Goto($2) }
      | END {  Printf.printf "PARSER : instruction END traitée\n";  End }
+     | IF expr GOTO INTEGER { Printf.printf "PARSER : instruction IFG traitée\n"; If($2,$4) }
+    //  | GOSUB INTEGER  { Printf.printf "PARSER : instruction GOSUB traitée\n"; Gosub ($2) }
+    //  | RETURN { Printf.printf "PARSER : instruction RETURN traitée\n"; Return }
 ;
 
 seq : {[]}
