@@ -9,4 +9,3 @@ ocamlc -c lexer.ml;
 ocamlc -c parser.ml;
 ocamlc -c calc.ml;
 ocamlc -o calc ast.cmo eval.cmo lexer.cmo parser.cmo calc.cmo
-rm -f parser.ml parser.mli lexer.ml *.cmi *.cmo

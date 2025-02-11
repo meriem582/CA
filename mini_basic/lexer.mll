@@ -36,7 +36,6 @@ rule token = parse
   | "return"      { Printf.printf "LEXER : instruction RETURN détectée\n" ; RETURN }
   | integer as x  { INTEGER(int_of_string x) }
   | float as x    { FLOAT(float_of_string x) }  
-  | integer as x  { INTEGER(int_of_string x) }
   | string as s   { STRING(String.sub s 1 (String.length s - 2)) } 
   | ident as x    { IDENT(x) }
   | eol           { EOL }
