@@ -130,19 +130,24 @@ let const_type_to_string = function
   | STRING -> "STRING"
 
 (* Définition des listes de types d'opcodes spécifiques *)
-let _RKBCInstr = [9; 12; 13; 14; 15; 16; 17; 23; 24]  (* Correspond à SETTABLE, ADD, SUB, MUL, DIV, MOD, POW, EQ, LT *)
-let _RKCInstr = [6; 11]  (* Correspond à GETTABLE, SELF *)
-let _KBx = [1; 5; 7]  (* Correspond à LOADK, GETGLOBAL, SETGLOBAL *)
+let _RKBCInstr = 
+  [9; 12; 13; 14; 15; 16; 17; 23; 24]  (* Correspond à SETTABLE, ADD, SUB, MUL, DIV, MOD, POW, EQ, LT *)
+let _RKCInstr = 
+  [6; 11]  (* Correspond à GETTABLE, SELF *)
+let _KBx = 
+  [1; 5; 7]  (* Correspond à LOADK, GETGLOBAL, SETGLOBAL *)
 
-let _LUAMAGIC = "\x1bLua"
+(*_LUAMAGIC est la signature de l'entête du bytecode Lua*)
+let _LUAMAGIC = 
+  "\x1bLua" 
 
-(* Définition de la fonction whichRK *)
+(* Définition de la fonction whichRK qui vérifie si un bit est un registre ou une constante *)
 let which_rk (rk: int) : bool =
   (rk land (1 lsl 8)) > 0
 
-(* Définition de la fonction readRKasK *)
+(* Définition de la fonction readRKasK qui lit un registre ou une constante *)
 let read_rk_as_k (rk: int) : int =
-  rk land (lnot (1 lsl 8))  (* Utilisation de l'opérateur lnot pour inverser le bit *)
+  rk land (lnot (1 lsl 8))  
 
 (* Définition du type instruction *)
 type instruction = {
@@ -154,11 +159,11 @@ type instruction = {
   mutable c : int option;         (* Champ C (optionnel) *)
 }
 
-(* Constructeur pour créer une nouvelle instruction *)
+(* Constructeur pour créer une nouvelle instruction (vu comme constructeur) *)
 let create_instruction t name_instr = {
   instr_type = t;
   name_instr = name_instr;
-  opcode = None;  (* Initialisé à None, équivalent de "None" en Python *)
+  opcode = None; 
   a = None;
   b = None;
   c = None;
@@ -317,10 +322,7 @@ let find_local chunk pc =
 
 (* Fonction pour trouver un upvalue à partir d'une position *)
 let get_constant chunk indx =
-  if indx >= 0 && indx < List.length chunk.constants then
     List.nth chunk.constants indx
-  else
-    failwith (Printf.sprintf "Index %d out of bounds" indx)
 
 (* Fonction pour obtenir une annotation pour une instruction *) 
 let getAnnotation instr chunk =
@@ -336,7 +338,7 @@ let getAnnotation instr chunk =
                Printf.sprintf "concat %d values from R[%d] to R[%d], store into R[%d]" count (match instr.b with Some v -> v | None -> 0) (match instr.c with Some v -> v | None -> 0) (match instr.a with Some v -> v | None -> 0)
   | _ -> ""
   
-(* Fonction pour afficher un chunk *)
+(* Fonction pour afficher un block *)
 let rec print_chunk chunk =
   Printf.printf "\n==== [[%s's constants]] ====\n" chunk.name_chunk;
   List.iteri (fun i c ->
@@ -377,9 +379,11 @@ let set_bits num data p s =
   (num land (lnot ((lnot ((lnot 0) lsl s)) lsl p))) lor
   ((data lsl p) land ((lnot ((lnot 0) lsl s)) lsl p))
 
+(* fonction pour obtenir des bits dans un entier selon une plage donnée *)
 let get_bits num p s = 
   (num lsr p) land (lnot ((lnot 0) lsl s))
 
+(* Fonction pour décoder une instruction *)
 let decode_instr data : instruction =
     let opcode = get_bits data 0 6 in
     let template = List.nth instr_lookup_tbl opcode in
@@ -398,6 +402,7 @@ let decode_instr data : instruction =
     } in
     instr
 
+(* Fonction pour encoder une instruction *)
 let _encode_instr instr =
   let data = 0 in
   let data = set_bits data (Option.get instr.opcode) 0 6 in
@@ -413,8 +418,9 @@ let _encode_instr instr =
   in
   data
 
+(* Définition du type lua_undump *)
 type lua_undump = {
-  mutable bytecode : int array;
+  mutable bytecode : bytes;
   mutable index : int;
   mutable vm_version : int;
   mutable bytecode_format : int;
@@ -424,12 +430,13 @@ type lua_undump = {
   mutable instr_size : int;
   mutable l_number_size : int;
   mutable integral_flag : int;
-  mutable root_chunk : string; (* Placeholder pour le chunk décodé *)
+  mutable root_chunk : chunk;
 }
 
+(* Constructeur pour créer un nouveau lua_undump *)
 let create_lua_undump bytecode = {
   bytecode;
-  index = 4; (* Alignement de l'index, saute l'en-tête *)
+  index = 4;
   vm_version = 0;
   bytecode_format = 0;
   big_endian = false;
@@ -438,248 +445,112 @@ let create_lua_undump bytecode = {
   instr_size = 0;
   l_number_size = 0;
   integral_flag = 0;
-  root_chunk = "";
+  root_chunk = create_chunk ();
 }
 
-let load_block lua_undump sz =
-  if lua_undump.index + sz > Array.length lua_undump.bytecode then
+let _loadBlock lua_undump sz =
+  if lua_undump.index + sz > Bytes.length lua_undump.bytecode then
     failwith "Malformed bytecode!"
   else
-    let temp = Array.sub lua_undump.bytecode lua_undump.index sz in
+    let temp = Bytes.sub lua_undump.bytecode lua_undump.index sz in
     lua_undump.index <- lua_undump.index + sz;
     temp
 
-(* Fonction sécurisée pour récupérer un octet et avancer l'index *)
-let get_byte lua_undump =
-  if lua_undump.index >= Array.length lua_undump.bytecode then
-    failwith "Unexpected end of bytecode"
-  else
-    let byte = lua_undump.bytecode.(lua_undump.index) in
-    lua_undump.index <- lua_undump.index + 1;
-    byte
+let _get_byte lua_undump =
+  let byte = Bytes.get lua_undump.bytecode lua_undump.index in
+  lua_undump.index <- lua_undump.index + 1;
+  Char.code byte
 
-let decode_bytecode bytecode =
-  if Array.length bytecode < 9 then
-    failwith "Bytecode too short to be valid"
-  else
-    let lua_undump = create_lua_undump bytecode in
-
-    (* Extraction des informations du bytecode *)
-    lua_undump.vm_version <- get_byte lua_undump;
-    lua_undump.bytecode_format <- get_byte lua_undump;
-    lua_undump.big_endian <- (get_byte lua_undump = 0);
-    lua_undump.int_size <- get_byte lua_undump;
-    lua_undump.size_t <- get_byte lua_undump;
-    lua_undump.instr_size <- get_byte lua_undump;
-    lua_undump.l_number_size <- get_byte lua_undump;
-    lua_undump.integral_flag <- get_byte lua_undump;
-
-    (* Décodage du chunk principal *)
-    lua_undump.root_chunk <- "chunk_decoded"; (* Placeholder pour le vrai décodage *)
-
-    (* Affichage des informations *)
-    Printf.printf "\n---- Decoded Bytecode Info ----\n";
-    Printf.printf "VM Version        : %d\n" lua_undump.vm_version;
-    Printf.printf "Bytecode Format   : %d\n" lua_undump.bytecode_format;
-    Printf.printf "Big Endian        : %b\n" lua_undump.big_endian;
-    Printf.printf "Int Size          : %d bytes\n" lua_undump.int_size;
-    Printf.printf "Size_t Size       : %d bytes\n" lua_undump.size_t;
-    Printf.printf "Instruction Size  : %d bytes\n" lua_undump.instr_size;
-    Printf.printf "Lua Number Size   : %d bytes\n" lua_undump.l_number_size;
-    Printf.printf "Integral Flag     : %d (%s)\n" 
-      lua_undump.integral_flag (if lua_undump.integral_flag = 0 then "Floating point" else "Integer-based");
-    Printf.printf "Root Chunk        : %s\n" lua_undump.root_chunk;
-    Printf.printf "--------------------------------\n\n";
-
-    lua_undump.root_chunk
-
-(* Fonction pour charger un fichier bytecode Lua *)
-let load_file luaCFile =
-  let ic = open_in_bin luaCFile in
-  let bytecode = really_input_string ic (in_channel_length ic) in
-  close_in ic;
+let _get_uint32 (lua_undump : lua_undump) : int =
+  let b0 = Char.code (Bytes.get lua_undump.bytecode lua_undump.index) in
+  let b1 = Char.code (Bytes.get lua_undump.bytecode (lua_undump.index + 1)) in
+  let b2 = Char.code (Bytes.get lua_undump.bytecode (lua_undump.index + 2)) in
+  let b3 = Char.code (Bytes.get lua_undump.bytecode (lua_undump.index + 3)) in
   
-  if String.length bytecode < 9 then
-    failwith "Lua bytecode file too short"
+  lua_undump.index <- lua_undump.index + 4;
+  (*On récupere selon ordre de bytecode "big_endian" or "little endian"*)
+  if lua_undump.big_endian then
+    (b0 lsl 24) lor (b1 lsl 16) lor (b2 lsl 8) lor b3
   else
-    let bytecode_array = Array.init (String.length bytecode) (fun i -> Char.code bytecode.[i]) in
-    decode_bytecode bytecode_array
+    (b3 lsl 24) lor (b2 lsl 16) lor (b1 lsl 8) lor b0
 
-(* Fonction pour afficher le désassemblage du bytecode *)
-let print_disassembly lua_undump =
-  print_endline lua_undump.root_chunk
 
-(* Fonction pour décoder un bytecode brut *)
-let decode_rawbytecode rawbytecode =
-  (* Vérification de la taille avant de manipuler la chaîne *)
-  if String.length rawbytecode < 4 then
-    failwith "Raw bytecode too short"
-  else if not (String.sub rawbytecode 0 4 = _LUAMAGIC) then
-    raise LuaBytecodeExpected
+let _get_uint lua_undump : int =
+  let block = Array.init lua_undump.int_size (fun i ->
+    Char.code (Bytes.get lua_undump.bytecode (lua_undump.index + i))
+  ) in
+  lua_undump.index <- lua_undump.index + lua_undump.int_size;
+  let result = ref 0 in
+  if lua_undump.big_endian then
+    Array.iter (fun b -> result := (!result lsl 8) lor b) block
   else
-    let bytecode = Array.init (String.length rawbytecode) (fun i -> Char.code rawbytecode.[i]) in
-    decode_bytecode bytecode
+    Array.iteri (fun i b -> result := !result lor (b lsl (8 * i))) block;
+  !result
 
-let get_uint32 lua_undump =
-  (* Charger 4 octets depuis le bytecode *)
-  let block = load_block lua_undump 4 in
-
-  (* Convertir les 4 octets en un entier non signé *)
-  let result =
-    if lua_undump.big_endian then
-      (* Big-endian : MSB en premier *)
-      Int32.logor (Int32.shift_left (Int32.of_int block.(0)) 24)
-        (Int32.logor (Int32.shift_left (Int32.of_int block.(1)) 16)
-          (Int32.logor (Int32.shift_left (Int32.of_int block.(2)) 8)
-            (Int32.of_int block.(3))))
-    else
-      (* Little-endian : LSB en premier *)
-      Int32.logor (Int32.shift_left (Int32.of_int block.(3)) 24)
-        (Int32.logor (Int32.shift_left (Int32.of_int block.(2)) 16)
-          (Int32.logor (Int32.shift_left (Int32.of_int block.(1)) 8)
-            (Int32.of_int block.(0))))
-  in
-
-  (* Retourner le résultat en tant qu'entier *)
-  Int32.to_int result
-  
-let test_get_uint32 () =
-  let lua_undump = {
-    bytecode = [|0x12; 0x34; 0x56; 0x78; 0x9A; 0xBC|];
-    index = 0;
-    vm_version = 0;
-    bytecode_format = 0;
-    big_endian = true;
-    int_size = 4;
-    size_t = 4;
-    instr_size = 4;
-    l_number_size = 4;
-    integral_flag = 0;
-    root_chunk = "";
-  } in
-
-  let result = get_uint32 lua_undump in
-  Printf.printf "Résultat (big-endian) : 0x%08X\n" result;
-
-  lua_undump.index <- 0;
-  lua_undump.big_endian <- false;
-
-  let result_le = get_uint32 lua_undump in
-  Printf.printf "Résultat (little-endian) : 0x%08X\n" result_le;()
-  
-(* Fonction pour convertir un bloc d'octets en entier non signé *)
-type endian = BigEndian | LittleEndian
-
-let _get_uint self =
-  let order = if self.big_endian then BigEndian else LittleEndian in
-  let bytes = load_block self self.int_size in
-  match order with
-  | BigEndian -> 
-      List.fold_left (fun acc byte -> (acc lsl 8) lor byte) 0 (Array.to_list bytes)
-  | LittleEndian ->
-      List.fold_right (fun byte acc -> (acc lsl 8) lor byte) (Array.to_list bytes) 0
-
-  
-(* Fonction pour lire un entier non signé de taille size_t *)
-let _get_size_t self =
-  let order = if self.big_endian then BigEndian else LittleEndian in
-  let bytes = load_block self self.size_t in
-  match order with
-  | BigEndian -> 
-      List.fold_left (fun acc byte -> (acc lsl 8) lor byte) 0 (Array.to_list bytes)
-  | LittleEndian ->
-      List.fold_right (fun byte acc -> (acc lsl 8) lor byte) (Array.to_list bytes) 0
-
-(* Convertit un tableau d'entiers (0-255) en une chaîne de caractères *)
-let array_to_string arr =
-  String.init (Array.length arr) (fun i -> Char.chr arr.(i))
-
-(* Convertit un bloc binaire en float64 (IEEE 754) *)
-let bytes_to_float64 big_endian bytes =
-  if String.length bytes <> 8 then invalid_arg "Invalid block size";
-  let b = Bytes.of_string bytes in
-  let i64 =
-    if big_endian then
-      Int64.logor
-        (shift_left (of_int (Char.code (Bytes.get b 0))) 56)
-        (shift_left (of_int (Char.code (Bytes.get b 1))) 48)
-      |> logor (shift_left (of_int (Char.code (Bytes.get b 2))) 40)
-      |> logor (shift_left (of_int (Char.code (Bytes.get b 3))) 32)
-      |> logor (shift_left (of_int (Char.code (Bytes.get b 4))) 24)
-      |> logor (shift_left (of_int (Char.code (Bytes.get b 5))) 16)
-      |> logor (shift_left (of_int (Char.code (Bytes.get b 6))) 8)
-      |> logor (of_int (Char.code (Bytes.get b 7)))
-    else
-      Int64.logor
-        (of_int (Char.code (Bytes.get b 0)))
-        (shift_left (of_int (Char.code (Bytes.get b 1))) 8)
-      |> logor (shift_left (of_int (Char.code (Bytes.get b 2))) 16)
-      |> logor (shift_left (of_int (Char.code (Bytes.get b 3))) 24)
-      |> logor (shift_left (of_int (Char.code (Bytes.get b 4))) 32)
-      |> logor (shift_left (of_int (Char.code (Bytes.get b 5))) 40)
-      |> logor (shift_left (of_int (Char.code (Bytes.get b 6))) 48)
-      |> logor (shift_left (of_int (Char.code (Bytes.get b 7))) 56)
-  in
-  Int64.float_of_bits i64
-
-(* Fonction principale _get_double utilisant load_block *)
+(* Fonction pour récupérer un double *)
 let _get_double lua_undump : float =
-  let block = load_block lua_undump 8 in
-  let data = array_to_string block in
-  bytes_to_float64 lua_undump.big_endian data
+  let block = Array.init lua_undump.l_number_size (fun i ->
+    Char.code (Bytes.get lua_undump.bytecode (lua_undump.index + i))
+  ) in
+  lua_undump.index <- lua_undump.index + lua_undump.l_number_size;
+  let i =
+    if lua_undump.big_endian then
+      Array.fold_left (fun acc byte -> logor (shift_left acc 8) (of_int byte)) zero block
+    else
+      Array.fold_left (fun acc (i, byte) -> logor acc (shift_left (of_int byte) (8 * i)))
+        zero (Array.mapi (fun i byte -> (i, byte)) block)
+  in
+  Int64.float_of_bits i
+
+let _get_size_t lua_undump : int =
+  let block = Array.init lua_undump.size_t (fun i ->
+    let byte = Char.code (Bytes.get lua_undump.bytecode (lua_undump.index + i)) in
+    byte
+  ) in
+
+  lua_undump.index <- lua_undump.index + lua_undump.size_t;
+  if lua_undump.big_endian then
+    Array.fold_left (fun acc byte -> (acc lsl 8) lor byte) 0 block
+  else
+    Array.fold_left (fun acc (i, byte) -> acc lor (byte lsl (8 * i))) 0
+      (Array.mapi (fun i byte -> (i, byte)) block)
 
 (* Fonction pour extraire une chaîne de caractères d'un bloc donné *)
 let _get_string lua_undump size : string =
-  let block = load_block lua_undump size in
-  let str = array_to_string block in
+  let block = _loadBlock lua_undump size in
+  let str = Bytes.to_string block in
   (* On supprime le dernier caractère avec String.sub *)
   String.sub str 0 (String.length str - 1)
-
-
-
-
-
-
 
 let rec decode_chunk lua_undump =
     let chunk = create_chunk () in
   
     (* Informations du chunk *)
-    let size = lua_undump.size_t + 2 in
-    Printf.printf "size_t: %d\n" size;
+    let size = _get_size_t lua_undump in
     chunk.name_chunk <- _get_string lua_undump size;
-    Printf.printf "Chunk name: %s\n" chunk.name_chunk;
-
     chunk.frst_line <- _get_uint lua_undump;
-    Printf.printf "First line: %d\n" chunk.frst_line;
-
     chunk.last_line <- _get_uint lua_undump;
-    Printf.printf "Last line: %d\n" chunk.last_line;
-    chunk.numUpvals <- get_byte lua_undump;
-    Printf.printf "Number of upvalues: %d\n" chunk.numUpvals;
-    chunk.numParams <- get_byte lua_undump;
-    Printf.printf "Number of parameters: %d\n" chunk.numParams;
-    chunk.isVarg <- (get_byte lua_undump) <> 0;
-    Printf.printf "Is vararg: %b\n" chunk.isVarg;
-    chunk.maxStack <- get_byte lua_undump;
-    Printf.printf "Max stack size: %d\n" chunk.maxStack;
+    chunk.numUpvals <- _get_byte lua_undump;
+    chunk.numParams <- _get_byte lua_undump;
+    chunk.isVarg <- (_get_byte lua_undump) <> 0;
+    chunk.maxStack <- _get_byte lua_undump;
   
     (* Instructions *)
     let num_instr = _get_uint lua_undump in
     for _ = 1 to num_instr do
-      let instr = decode_instr (get_uint32 lua_undump) in
+      let instr = decode_instr (_get_uint32 lua_undump) in
       append_instruction chunk instr
     done;
   
     (* Constantes *)
     let num_consts = _get_uint lua_undump in
     for _ = 1 to num_consts do
-      let ctype = get_byte lua_undump in
+      let ctype = _get_byte lua_undump in
       let constant = match ctype with
         | 0 -> { type_const = NIL; data = "" }
-        | 1 -> { type_const = BOOL; data = string_of_bool ((get_byte lua_undump) <> 0) }
+        | 1 -> { type_const = BOOL; data = string_of_bool ((_get_byte lua_undump) <> 0) }
         | 3 -> { type_const = NUMBER; data = string_of_float (_get_double lua_undump) }
-        | 4 -> let size = _get_uint lua_undump in { type_const = STRING; data = _get_string lua_undump size }
+        | 4 -> let size = _get_size_t lua_undump in { type_const = STRING; data = _get_string lua_undump size }
         | _ -> failwith (Printf.sprintf "Unknown Datatype! [%d]" ctype)
       in
       append_constant chunk constant
@@ -719,193 +590,50 @@ let rec decode_chunk lua_undump =
   
     chunk
   
-let test_decode_chunk () =
-  let lua_undump = {
-    bytecode = [|
-  27; 76; 117; 97; 1; 0; 0; 0; 81; 0; 1; 4; 4; 4; 8; 0; 
-  25; 147; 13; 10; 26; 10; 0; 0; 0; 0; 0; 0; 0; 2; 0; 0; 
-  0; 0; 0; 0; 0; 0; 1; 4; 0; 0; 0; 6; 64; 0; 0; 0; 
-  0; 0; 0; 0; 1; 0; 0; 0; 0; 0; 0; 0; 37; 64; 0; 0
-|];
-    index = 0;
-    vm_version = 0;
-    bytecode_format = 0;
-    big_endian = false;
-    int_size = 4;
-    size_t = 4;
-    instr_size = 4;
-    l_number_size = 8;
-    integral_flag = 0;
-    root_chunk = "";
-  } in
-  let chunk = decode_chunk lua_undump in
-  Printf.printf "Chunk name: %s\n" chunk.name_chunk;
-  Printf.printf "First line: %d\n" chunk.frst_line;
-  Printf.printf "Last line: %d\n" chunk.last_line;
-  Printf.printf "Number of upvalues: %d\n" chunk.numUpvals;
-  Printf.printf "Number of parameters: %d\n" chunk.numParams;
-  Printf.printf "Is vararg: %b\n" chunk.isVarg;
-  Printf.printf "Max stack size: %d\n" chunk.maxStack;
-  Printf.printf "Number of instructions: %d\n" (List.length chunk.instructions);
-  Printf.printf "Number of constants: %d\n" (List.length chunk.constants);
-  Printf.printf "Number of prototypes: %d\n" (List.length chunk.protos);
-  Printf.printf "Number of locals: %d\n" (List.length chunk.locals);
-  Printf.printf "Number of upvalues: %d\n" (List.length chunk.upvalues)
+let decode_bytecode bytecode =
+  let lua_undump = create_lua_undump bytecode in
 
+  (* Extraction des informations du bytecode *)
+  lua_undump.vm_version <- _get_byte lua_undump;
+  lua_undump.bytecode_format <- _get_byte lua_undump;
+  lua_undump.big_endian <- (_get_byte lua_undump = 0);
+  lua_undump.int_size <- _get_byte lua_undump;
+  lua_undump.size_t <- _get_byte lua_undump;
+  lua_undump.instr_size <- _get_byte lua_undump;
+  lua_undump.l_number_size <- _get_byte lua_undump;
+  lua_undump.integral_flag <- _get_byte lua_undump;
 
+  (* Décodage du chunk principal *)
+  lua_undump.root_chunk <- decode_chunk lua_undump;
+  lua_undump.root_chunk
 
+(* Fonction pour afficher le désassemblage du bytecode *)
+let print_disassembly lua_undump =
+  print_chunk lua_undump.root_chunk
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-
-(*LuaDump*)
-let set_uint32 big_endian i =
-  let bytes = Bytes.create 4 in
-  if big_endian then
-    Bytes.set_int32_be bytes 0 (Int32.of_int i)
+(* Fonction pour décoder un bytecode brut *)
+let decode_rawbytecode lua_undump rawbytecode =
+  (* Vérification de la taille avant de manipuler la chaîne *)
+  if String.length rawbytecode < 4 then
+    failwith "Raw bytecode too short"
+  else if not (String.sub rawbytecode 0 4 = _LUAMAGIC) then
+    raise LuaBytecodeExpected
   else
-    Bytes.set_int32_le bytes 0 (Int32.of_int i);
-  bytes
+    let bytecode = Bytes.init (String.length rawbytecode) (fun i -> rawbytecode.[i]) in
+    decode_bytecode bytecode
+(* Fonction pour charger un fichier bytecode Lua *)
 
-
-let set_float64 big_endian f =
-  let bytes = Bytes.create 8 in
-  let bits = Int64.bits_of_float f in
-  if big_endian then
-    Bytes.set_int64_be bytes 0 bits
-  else
-    Bytes.set_int64_le bytes 0 bits;
-  bytes
-
-let write_null_terminated_string write_block str =
-  write_block (Bytes.of_string str);
-  write_block (Bytes.make 1 (Char.chr 0))
-
-let rec dump_chunk ~big_endian ~write_block ~encode_instr chunk =
-  write_null_terminated_string write_block chunk.name_chunk;
-  write_block (set_uint32 big_endian chunk.frst_line);
-  write_block (set_uint32 big_endian chunk.last_line);
-  write_block (Bytes.make 1 (Char.chr chunk.numUpvals));
-  write_block (Bytes.make 1 (Char.chr chunk.numParams));
-  write_block (Bytes.make 1 (Char.chr (if chunk.isVarg then 1 else 0)));
-  write_block (Bytes.make 1 (Char.chr chunk.maxStack));
-
-  write_block (set_uint32 big_endian (List.length chunk.instructions));
-  List.iter (fun instr ->
-    write_block (set_uint32 big_endian (encode_instr instr))
-  ) chunk.instructions;
-  
-  write_block (set_uint32 big_endian (List.length chunk.constants));
-  List.iter (fun c ->
-    match c.type_const with
-    | NIL -> write_block (Bytes.make 1 (Char.chr 0))
-    | BOOL ->
-        write_block (Bytes.make 1 (Char.chr 1));
-        write_block (Bytes.make 1 (Char.chr (if c.data = "true" then 1 else 0)))
-    | NUMBER ->
-        write_block (Bytes.make 1 (Char.chr 3));
-        write_block (set_float64 big_endian (float_of_string c.data))
-    | STRING ->
-        write_block (Bytes.make 1 (Char.chr 4));
-        write_null_terminated_string write_block c.data
-  ) chunk.constants;
-
-  write_block (set_uint32 big_endian (List.length chunk.protos));
-  List.iter (dump_chunk ~big_endian ~write_block ~encode_instr) chunk.protos;
-
-  write_block (set_uint32 big_endian (List.length chunk.lineNums));
-  List.iter (fun l -> write_block (set_uint32 big_endian l)) chunk.lineNums;
-
-  write_block (set_uint32 big_endian (List.length chunk.locals));
-  List.iter (fun local ->
-    write_null_terminated_string write_block local.name_local;
-    write_block (set_uint32 big_endian local.start);
-    write_block (set_uint32 big_endian local.end_pc)
-  ) chunk.locals;
-
-  write_block (set_uint32 big_endian (List.length chunk.upvalues));
-  List.iter (write_null_terminated_string write_block) chunk.upvalues
-
-let dump_header ~big_endian ~write_block ~vm_version ~bytecode_format ~int_size ~size_t ~instr_size ~l_number_size ~integral_flag =
-  let lua_magic = "\x1bLua" in
-  write_block (Bytes.of_string lua_magic);
-  write_block (Bytes.make 1 (Char.chr vm_version));
-  write_block (Bytes.make 1 (Char.chr bytecode_format));
-  write_block (Bytes.make 1 (Char.chr (if big_endian then 0 else 1)));
-  write_block (Bytes.make 1 (Char.chr int_size));
-  write_block (Bytes.make 1 (Char.chr size_t));
-  write_block (Bytes.make 1 (Char.chr instr_size));
-  write_block (Bytes.make 1 (Char.chr l_number_size));
-  write_block (Bytes.make 1 (Char.chr integral_flag))
-
-let dump ~big_endian ~write_block ~encode_instr root_chunk =
-  dump_header ~big_endian ~write_block ~vm_version:0x51 ~bytecode_format:0 ~int_size:4 ~size_t:8 ~instr_size:4 ~l_number_size:8 ~integral_flag:0;
-  dump_chunk ~big_endian ~write_block ~encode_instr root_chunk
-
-let test_write_block buffer data =
-  Buffer.add_bytes buffer data
-
-let test_encode_instr instr = match instr.opcode with
-  | Some opcode -> opcode
-  | None -> 0
-
-let hex_of_bytes bytes =
-  Bytes.iter (fun c -> Printf.printf "%02x " (Char.code c)) bytes;
-  print_newline ()
-  
-let save_to_file filename buffer =
-  let oc = open_out_bin filename in
-  output_bytes oc (Buffer.to_bytes buffer);
-  close_out oc;
-  Printf.printf "Bytecode écrit dans : %s\n" filename
-
+let load_file luaCFile =
+  let ic = open_in_bin luaCFile in
+  let bytecode = really_input_string ic (in_channel_length ic) in
+  close_in ic;
+  let bytecode_bytes = Bytes.of_string bytecode in
+  decode_bytecode bytecode_bytes
+    
 let () =
-  let buffer = Buffer.create 1024 in
-  let chunk = {
-    name_chunk = "main";
-    frst_line = 1;
-    last_line = 10;
-    numUpvals = 0;
-    numParams = 2;
-    isVarg = false;
-    maxStack = 5;
-    instructions = [
-      {instr_type = ABC; name_instr = "LOADK"; opcode = Some 1; a = Some 0; b = Some 1; c = None};
-      {instr_type = ABC; name_instr = "ADD"; opcode = Some 2; a = Some 0; b = Some 1; c = Some 2};
-      {instr_type = ABC; name_instr = "RETURN"; opcode = Some 3; a = Some 0; b = None; c = None}
-    ];
-    constants = [{type_const = NUMBER; data = "3.14"}];
-    protos = [];
-    lineNums = [1; 2; 3];
-    locals = [{name_local = "x"; start = 0; end_pc = 10}];
-    upvalues = ["env"];
-  } in
-  dump ~big_endian:true ~write_block:(test_write_block buffer) ~encode_instr:test_encode_instr chunk;
-  let output_file = "output.luac" in
-  let oc = open_out_bin output_file in
-  output_bytes oc (Bytes.of_string (Buffer.contents buffer));
-  close_out oc;
-  Printf.printf "Bytecode écrit dans : %s\n" output_file;
+  if Array.length Sys.argv <> 2 then
+    Printf.printf "Utilisation : %s <nom_fichier>\n" Sys.argv.(0)
+  else
+    let filename = Sys.argv.(1) in
+    let chunk = load_file filename  in
+    print_chunk chunk
