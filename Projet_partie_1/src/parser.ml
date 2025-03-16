@@ -350,24 +350,24 @@ let getAnnotation instr chunk =
   
 (* Fonction pour afficher un block *)
 let rec print_chunk chunk =
-
-  Printf.printf "\n==== [[%s's constants]] ====\n\n" chunk.name_chunk;
+  Printf.printf "\n===========+ Chunk: %s +===========\n" chunk.name_chunk;
+  Printf.printf "\n==== [[ constants ]] ====\n\n";
   List.iteri (fun i c ->
-    Printf.printf "%d: %s\n" i (toString c)
+    Printf.printf "[%d]: %s\n" i (toString c)
   ) chunk.constants;
 
-  Printf.printf "\n==== [[%s's locals]] ====\n\n" chunk.name_chunk;
+  Printf.printf "\n==== [[ locals ]] ====\n\n";
   List.iteri (fun i l -> Printf.printf "R[%d]: %s\n" i l.name_local ) chunk.locals;
   
-  Printf.printf "\n==== [[%s's dissassembly]] ====\n\n" chunk.name_chunk;
+  Printf.printf "\n==== [[ Instructions ]] ====\n\n" ;
   List.iteri (fun i instr ->
-    Printf.printf "[%3d] %-40s; %s\n" i (print_instruction instr) (getAnnotation instr chunk);
+    Printf.printf "[%d] %-40s; %s\n" i (print_instruction instr) (getAnnotation instr chunk);
   ) chunk.instructions;
 
   if List.length chunk.protos > 0 then
-    Printf.printf "\n==== [[%s's protos]] ====\n\n" chunk.name_chunk;
+    Printf.printf "\n==== [[ protos ]] ====\n\n";
     List.iter (fun z -> print_chunk z) chunk.protos
-     
+
 (* ensemble de création de couple (type, nom) pour les instructions *)
 let instr_lookup_tbl = [
   create_instruction ABC "MOVE"; create_instruction ABx "LOADK"; create_instruction ABC "LOADBOOL";
@@ -511,10 +511,16 @@ let _get_size_t lua_undump : int =
 
 (* Fonction pour extraire une chaîne de caractères d'un bloc donné *)
 let _get_string lua_undump size : string =
-  let block = _loadBlock lua_undump size in
-  let str = Bytes.to_string block in
-  (* On supprime le dernier caractère avec String.sub *)
-  String.sub str 0 (String.length str - 1)
+  if size <= 0 then
+    ""  (* Retourne une chaîne vide si la taille est 0 ou négative *)
+  else
+    let block = _loadBlock lua_undump size in
+    let str = Bytes.to_string block in
+    (* On supprime le dernier caractère (null terminator) si la chaîne n'est pas vide *)
+    if String.length str > 0 then
+      String.sub str 0 (String.length str - 1)
+    else
+      ""
 
 let rec decode_chunk lua_undump =
     let chunk = create_chunk () in
@@ -594,14 +600,22 @@ let decode_bytecode bytecode =
   lua_undump.instr_size <- _get_byte lua_undump;
   lua_undump.l_number_size <- _get_byte lua_undump;
   lua_undump.integral_flag <- _get_byte lua_undump;
-
   (* Décodage du chunk principal *)
   lua_undump.root_chunk <- decode_chunk lua_undump;
-  lua_undump.root_chunk
 
-(* Fonction pour afficher le désassemblage du bytecode *)
-let print_disassembly lua_undump =
-  print_chunk lua_undump.root_chunk
+  Printf.printf "\n===========+ HEADER +===========\n";
+  Printf.printf "VM Version        : %d\n" lua_undump.vm_version;
+  Printf.printf "Bytecode Format   : %d\n" lua_undump.bytecode_format;
+  Printf.printf "index             : %d\n" lua_undump.index;
+  Printf.printf "Big Endian        : %b\n" lua_undump.big_endian;
+  Printf.printf "Int Size          : %d\n" lua_undump.int_size;
+  Printf.printf "Size_t Size       : %d\n" lua_undump.size_t;
+  Printf.printf "Instruction Size  : %d\n" lua_undump.instr_size;
+  Printf.printf "Lua Number Size   : %d\n" lua_undump.l_number_size;
+  Printf.printf "Integral Flag     : %d (%s)\n"
+    lua_undump.integral_flag (if lua_undump.integral_flag = 0 then "F" else "I");
+  Printf.printf "==================================\n";
+  lua_undump.root_chunk
 
 (* Fonction pour décoder un bytecode brut *)
 let decode_rawbytecode lua_undump rawbytecode =
@@ -727,7 +741,6 @@ let rec dump_chunk dump chunk =
   set_uint dump chunk.frst_line dump.int_size;
   set_uint dump chunk.last_line dump.int_size;
   set_byte dump chunk.numUpvals;
-  Printf.printf "numUpvals: %d\n" chunk.numUpvals;
   set_byte dump chunk.numParams;
   set_byte dump (if chunk.isVarg then 1 else 0);
   set_byte dump chunk.maxStack;
@@ -797,17 +810,32 @@ let save_to_file filename bytecode =
   Printf.printf "Bytecode écrit dans : %s\n" filename
 
 let () =
-  if Array.length Sys.argv <> 2 then
-    Printf.printf "Utilisation : %s <nom_fichier>\n" Sys.argv.(0)
+  let test_dir = "../test" in  (* Chemin vers le répertoire contenant les fichiers .luac *)
+  let output_dir = "../resultat_dump" in  (* Répertoire de destination *)
+
+  (* Vérifier si le répertoire de sortie existe, sinon le créer *)
+  if not (Sys.file_exists output_dir) then Sys.mkdir output_dir 0o755;
+
+  (* Vérifier si le répertoire test existe bien *)
+  if Sys.file_exists test_dir && Sys.is_directory test_dir then
+    let files = Sys.readdir test_dir in
+    Array.iter (fun file ->
+      if Filename.check_suffix file ".luac" then
+        let input_file = Filename.concat test_dir file in
+        let chunk = load_file input_file in
+        print_chunk chunk;
+        
+        (* Création de l'objet lua_dump *)
+        let lua_dump = create_dump chunk in
+        
+        (* Génération du bytecode *)
+        let bytecode = dump lua_dump in
+        
+        (* Définition du chemin du fichier de sortie *)
+        let output_file = Filename.concat output_dir ("processed_" ^ file) in
+        save_to_file output_file bytecode;
+        
+        Printf.printf "Fichier traité : %s -> %s\n" input_file output_file
+    ) files
   else
-    let filename = Sys.argv.(1) in
-    let chunk = load_file filename  in
-    print_chunk chunk;
-    (* Création de l'objet lua_dump *)
-    let lua_dump = create_dump chunk in
-
-    (* Génération du bytecode *)
-    let bytecode = dump lua_dump in
-
-    (* Sauvegarde du bytecode dans un fichier *)
-    save_to_file "output.luac" bytecode
+    Printf.printf "Erreur : Le répertoire %s n'existe pas ou n'est pas un dossier.\n" test_dir
