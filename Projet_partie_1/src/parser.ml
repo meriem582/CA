@@ -809,6 +809,83 @@ let save_to_file filename bytecode =
   close_out oc;
   Printf.printf "Bytecode écrit dans : %s\n" filename
 
+type vm_state = {
+  mutable stack : constant array;  (* Pile d'exécution *)
+  mutable globals : (string, constant) Hashtbl.t; (* Variables globales *)
+  mutable pc : int; (* Compteur de programme *)
+  chunk : chunk; (* Chunk contenant le code et les constantes *)
+}
+  
+let execute_instruction (vm : vm_state) =
+  if vm.pc >= List.length vm.chunk.instructions then
+    failwith "Erreur : dépassement du bytecode";
+
+  let instr = List.nth vm.chunk.instructions vm.pc in
+  match instr.name_instr with
+  | "LOADK" -> (
+      match instr.a, instr.b with
+      | Some a, Some bx ->
+          let constant_value = List.nth vm.chunk.constants bx in
+          vm.stack.(a) <- constant_value;
+          vm.pc <- vm.pc + 1
+      | _ -> failwith "LOADK : paramètres invalides"
+    )
+    | "GETGLOBAL" -> (
+      match instr.a, instr.b with
+      | Some a, Some bx -> (
+          let key = List.nth vm.chunk.constants bx in
+          match Hashtbl.find_opt vm.globals key.data with
+          | Some value -> vm.stack.(a) <- value; vm.pc <- vm.pc + 1
+          | None -> failwith ("GETGLOBAL : Variable globale inconnue -> " ^ key.data)
+        )
+      | _ -> failwith "GETGLOBAL : paramètres invalides"
+    )
+  
+
+  | "ADD" -> (
+      match instr.a, instr.b, instr.c with
+      | Some a, Some b, Some c -> (
+          match vm.stack.(b), vm.stack.(c) with
+          | { type_const = NUMBER; data = x }, { type_const = NUMBER; data = y } ->
+              let result = { type_const = NUMBER; data = string_of_float ((float_of_string x) +. (float_of_string y)) } in
+              vm.stack.(a) <- result;
+              vm.pc <- vm.pc + 1
+          | _ -> failwith "ADD : Opérandes non numériques"
+        )
+      | _ -> failwith "ADD : paramètres invalides"
+    )
+
+    | "CALL" -> (
+    match instr.a, instr.b with
+    | Some a, Some _ -> (
+        Printf.printf "Debug: CALL sur stack[%d] = %s\n" a vm.stack.(a).data;
+        match Hashtbl.find_opt vm.globals vm.stack.(a).data with
+        | Some { type_const = STRING; data = "print" } -> (
+            match vm.stack.(a + 1) with
+            | { type_const = NUMBER; data } | { type_const = STRING; data } ->
+                Printf.printf "Résultat  %s\n" data;
+                print_endline data;
+                vm.pc <- vm.pc + 1
+            | { type_const = NIL; _ } -> print_endline "nil"; vm.pc <- vm.pc + 1
+            | { type_const = BOOL; data } -> print_endline (if data = "true" then "true" else "false"); vm.pc <- vm.pc + 1
+          )
+        | Some _ -> failwith ("CALL : Fonction inconnue (non-print) -> " ^ vm.stack.(a).data)
+        | None -> failwith ("CALL : Fonction inexistante -> " ^ vm.stack.(a).data)
+      )
+    | _ -> failwith "CALL : paramètres invalides"
+  )
+
+
+  | "RETURN" -> vm.pc <- List.length vm.chunk.instructions (* Arrête l'exécution *)
+
+  | _ -> failwith ("Opcode inconnu : " ^ instr.name_instr)
+
+  let rec run_vm (vm : vm_state) =
+    if vm.pc < List.length vm.chunk.instructions then (
+      execute_instruction vm;
+      run_vm vm
+    )
+
 let () =
   let test_dir = "../test" in  (* Chemin vers le répertoire contenant les fichiers .luac *)
   let output_dir = "../resultat_dump" in  (* Répertoire de destination *)
@@ -835,7 +912,16 @@ let () =
         let output_file = Filename.concat output_dir ("processed_" ^ file) in
         save_to_file output_file bytecode;
         
-        Printf.printf "Fichier traité : %s -> %s\n" input_file output_file
+        Printf.printf "Fichier traité : %s -> %s\n" input_file output_file;
+      let vm = {
+        stack = Array.make 10 { type_const = NIL; data = "" };
+        globals = Hashtbl.create 10;
+        pc = 0;
+        chunk = chunk;
+      } in
+      Hashtbl.add vm.globals "print" { type_const = STRING; data = "print" };
+      run_vm vm
+  
     ) files
   else
     Printf.printf "Erreur : Le répertoire %s n'existe pas ou n'est pas un dossier.\n" test_dir
