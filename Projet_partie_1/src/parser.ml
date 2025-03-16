@@ -207,7 +207,7 @@ let print_instruction instr =
         in
         Printf.sprintf "%6s %6s" a b
   in
-  Printf.printf "%s : %s\n" instr_name regs
+  Printf.sprintf "%s : %s" instr_name regs
 
 (* Définition du type constant *)
 type constant ={
@@ -288,27 +288,26 @@ let create_chunk () = {
 
 (* Fonction pour ajouter une instruction à un chunk *)
 let append_instruction chunk instr =
-  chunk.instructions <- instr :: chunk.instructions
-
+  chunk.instructions <- chunk.instructions @ [instr]
 (* Fonction pour ajouter une constante à un chunk *)
 let append_constant chunk const =
-  chunk.constants <- const :: chunk.constants
+  chunk.constants <-  chunk.constants @ [const]
 
 (* Fonction pour ajouter un proto à un chunk *)
 let append_proto chunk proto =
-  chunk.protos <- proto :: chunk.protos
+  chunk.protos <- chunk.protos @ [proto]
 
 (* Fonction pour ajouter une ligne à un chunk *)
 let append_line chunk line =
-  chunk.lineNums <- line :: chunk.lineNums
+  chunk.lineNums <- chunk.lineNums @ [line]
 
 (* Fonction pour ajouter une variable locale à un chunk *)
 let append_local chunk local =
-  chunk.locals <- local :: chunk.locals
+  chunk.locals <- chunk.locals @ [local]
 
 (* Fonction pour ajouter un upvalue à un chunk *)
 let append_upval chunk upval =
-  chunk.upvalues <- upval :: chunk.upvalues
+  chunk.upvalues <- chunk.upvalues @ [upval]
 
 (* Fonction pour trouver une variable locale à partir d'une position *)
 let find_local chunk pc =
@@ -334,27 +333,39 @@ let getAnnotation instr chunk =
   | Some 13 -> Printf.sprintf "sub %s from %s, place into R[%d]" (format_rk (match instr.c with Some v -> v | None -> 0)) (format_rk (match instr.b with Some v -> v | None -> 0)) (match instr.a with Some v -> v | None -> 0)
   | Some 14 -> Printf.sprintf "mul %s to %s, place into R[%d]" (format_rk (match instr.c with Some v -> v | None -> 0)) (format_rk (match instr.b with Some v -> v | None -> 0)) (match instr.a with Some v -> v | None -> 0)
   | Some 15 -> Printf.sprintf "div %s from %s, place into R[%d]" (format_rk (match instr.c with Some v -> v | None -> 0)) (format_rk (match instr.b with Some v -> v | None -> 0)) (match instr.a with Some v -> v | None -> 0)
+  | Some 16 -> Printf.sprintf "mod %s from %s, place into R[%d]" (format_rk (match instr.c with Some v -> v | None -> 0)) (format_rk (match instr.b with Some v -> v | None -> 0)) (match instr.a with Some v -> v | None -> 0)
+  | Some 17 -> Printf.sprintf "pow %s to %s, place into R[%d]" (format_rk (match instr.c with Some v -> v | None -> 0)) (format_rk (match instr.b with Some v -> v | None -> 0)) (match instr.a with Some v -> v | None -> 0)
+  | Some 18 -> Printf.sprintf "negate %s, place into R[%d]" (format_rk (match instr.b with Some v -> v | None -> 0)) (match instr.a with Some v -> v | None -> 0)
+  | Some 19 -> Printf.sprintf "not %s, place into R[%d]" (format_rk (match instr.b with Some v -> v | None -> 0)) (match instr.a with Some v -> v | None -> 0)
+  | Some 20 -> Printf.sprintf "len %s, place into R[%d]" (format_rk (match instr.b with Some v -> v | None -> 0)) (match instr.a with Some v -> v | None -> 0)
   | Some 21 -> let count = (match instr.c with Some v -> v | None -> 0) - (match instr.b with Some v -> v | None -> 0) + 1 in
                Printf.sprintf "concat %d values from R[%d] to R[%d], store into R[%d]" count (match instr.b with Some v -> v | None -> 0) (match instr.c with Some v -> v | None -> 0) (match instr.a with Some v -> v | None -> 0)
+  | Some 22 -> Printf.sprintf "jump to %d" (match instr.b with Some v -> v | None -> 0)
+  | Some 23 -> Printf.sprintf "if R[%s] == R[%s] then pc++" (format_rk (match instr.b with Some v -> v | None -> 0)) (format_rk (match instr.c with Some v -> v | None -> 0))
+  | Some 24 -> Printf.sprintf "if R[%s] < R[%s] then pc++" (format_rk (match instr.b with Some v -> v | None -> 0)) (format_rk (match instr.c with Some v -> v | None -> 0))
+  | Some 25 -> Printf.sprintf "if R[%s] <= R[%s] then pc++" (format_rk (match instr.b with Some v -> v | None -> 0)) (format_rk (match instr.c with Some v -> v | None -> 0))
+  | Some 26 -> Printf.sprintf "if not R[%d] <=> %d pc++" (match instr.a with Some v -> v | None -> 0) (match instr.c with Some v -> v | None -> 0)
+  | Some 27 -> Printf.sprintf "if (R[%d] <=> %d) then R[%d] := R[%d] else pc++" (match instr.b with Some v -> v | None -> 0) (match instr.c with Some v -> v | None -> 0) (match instr.a with Some v -> v | None -> 0) (match instr.b with Some v -> v | None -> 0)
   | _ -> ""
   
 (* Fonction pour afficher un block *)
 let rec print_chunk chunk =
-  Printf.printf "\n==== [[%s's constants]] ====\n" chunk.name_chunk;
+
+  Printf.printf "\n==== [[%s's constants]] ====\n\n" chunk.name_chunk;
   List.iteri (fun i c ->
     Printf.printf "%d: %s\n" i (toString c)
   ) chunk.constants;
 
-  Printf.printf "\n==== [[%s's locals]] ====\n" chunk.name_chunk;
+  Printf.printf "\n==== [[%s's locals]] ====\n\n" chunk.name_chunk;
   List.iteri (fun i l -> Printf.printf "R[%d]: %s\n" i l.name_local ) chunk.locals;
   
-  Printf.printf "\n==== [[%s's dissassembly]] ====\n" chunk.name_chunk;
+  Printf.printf "\n==== [[%s's dissassembly]] ====\n\n" chunk.name_chunk;
   List.iteri (fun i instr ->
-    Printf.printf "[%3d] %-40s; %s\n" i instr.name_instr (getAnnotation instr chunk);
+    Printf.printf "[%3d] %-40s; %s\n" i (print_instruction instr) (getAnnotation instr chunk);
   ) chunk.instructions;
 
   if List.length chunk.protos > 0 then
-    Printf.printf "\n==== [[%s's protos]] ====\n" chunk.name_chunk;
+    Printf.printf "\n==== [[%s's protos]] ====\n\n" chunk.name_chunk;
     List.iter (fun z -> print_chunk z) chunk.protos
      
 (* ensemble de création de couple (type, nom) pour les instructions *)
@@ -401,22 +412,6 @@ let decode_instr data : instruction =
           | _ -> None)
     } in
     instr
-
-(* Fonction pour encoder une instruction *)
-let _encode_instr instr =
-  let data = 0 in
-  let data = set_bits data (Option.get instr.opcode) 0 6 in
-  let data = set_bits data (Option.get instr.a) 6 8 in
-  let data = match instr.instr_type with
-    | ABC ->
-        let data = set_bits data (Option.get instr.b) 23 9 in
-        set_bits data (Option.get instr.c) 14 9
-    | ABx ->
-        set_bits data (Option.get instr.b) 14 18
-    | AsBx ->
-        set_bits data (Option.get instr.b + 131071) 14 18
-  in
-  data
 
 (* Définition du type lua_undump *)
 type lua_undump = {
@@ -473,7 +468,6 @@ let _get_uint32 (lua_undump : lua_undump) : int =
     (b0 lsl 24) lor (b1 lsl 16) lor (b2 lsl 8) lor b3
   else
     (b3 lsl 24) lor (b2 lsl 16) lor (b1 lsl 8) lor b0
-
 
 let _get_uint lua_undump : int =
   let block = Array.init lua_undump.int_size (fun i ->
@@ -567,9 +561,7 @@ let rec decode_chunk lua_undump =
   
     (* Numéros de ligne *)
     let num_lines = _get_uint lua_undump in
-    for _ = 1 to num_lines do
-      ignore (_get_uint lua_undump)
-    done;
+    chunk.lineNums <- List.init num_lines (fun _ -> _get_uint lua_undump);
   
     (* Locaux *)
     let num_locals = _get_uint lua_undump in
@@ -629,11 +621,193 @@ let load_file luaCFile =
   close_in ic;
   let bytecode_bytes = Bytes.of_string bytecode in
   decode_bytecode bytecode_bytes
-    
+
+(*LuaDump*)
+let _encode_instr instr =
+  match instr.opcode, instr.a with
+  | Some opcode, Some a ->
+      let data = 0 in
+      let data = set_bits data opcode 0 6 in
+      let data = set_bits data a 6 8 in
+      let data =
+        match instr.instr_type with
+        | ABC  -> 
+            let b = match instr.b with Some b -> b | None -> 0 in
+            let c = match instr.c with Some c -> c | None -> 0 in
+            let data = set_bits data b 23 9 in
+            let data = set_bits data c 14 9 in
+            data
+        | ABx  -> 
+            let b = match instr.b with Some b -> b | None -> 0 in
+            let data = set_bits data b 14 18 in
+            data
+        | AsBx -> 
+            let b = match instr.b with Some b -> b | None -> 0 in
+            let data = set_bits data (b + 131071) 14 18 in
+            data
+      in
+      Some data
+      | _ -> 
+        None
+
+type endian = BigEndian | LittleEndian
+
+type lua_dump = {
+  mutable root_chunk : chunk;
+  mutable bytecode : bytes;
+  mutable vm_version : int;
+  mutable bytecode_format : int;
+  mutable big_endian : bool;
+  mutable int_size : int;
+  mutable size_t : int;
+  mutable instr_size : int;
+  mutable l_number_size : int;
+  mutable integral_flag : bool;
+}
+
+let create_dump root_chunk = {
+  root_chunk;
+  bytecode = Bytes.create 0;
+  vm_version = 0x51;
+  bytecode_format = 0x00;
+  big_endian = false;
+  int_size = 4;
+  size_t = 8;
+  instr_size = 4;
+  l_number_size = 8;
+  integral_flag = false;
+}
+
+let write_block dump data =
+  dump.bytecode <- Bytes.cat dump.bytecode data
+
+let set_byte dump b =
+  write_block dump (Bytes.make 1 (char_of_int b))
+
+let set_uint32 dump i =
+  let order = if dump.big_endian then BigEndian else LittleEndian in
+  let data = Bytes.create 4 in
+  for j = 0 to 3 do
+    let shift = if order = BigEndian then (3 - j) * 8 else j * 8 in
+    Bytes.set data j (char_of_int ((i lsr shift) land 0xFF))
+  done;
+  write_block dump data
+
+let set_uint dump i size =
+  let order = if dump.big_endian then BigEndian else LittleEndian in
+  let data = Bytes.create size in
+  for j = 0 to size - 1 do
+    let shift = if order = BigEndian then (size - 1 - j) * 8 else j * 8 in
+    Bytes.set data j (char_of_int ((i lsr shift) land 0xFF))
+  done;
+  write_block dump data
+
+let set_size_t dump i = set_uint dump i dump.size_t
+
+let set_double dump fval =
+  let f = Int64.bits_of_float fval in
+  let bytes = Bytes.create 8 in 
+  if dump.big_endian then
+    for n = 0 to 7 do
+      Bytes.set bytes n (Char.chr (Int64.to_int (Int64.logand (Int64.shift_right f (8 * (7 - n))) 0xFFL)))
+    done
+  else
+    for n = 0 to 7 do
+      Bytes.set bytes n (Char.chr (Int64.to_int (Int64.logand (Int64.shift_right f (8 * n)) 0xFFL)))
+    done;
+  write_block dump bytes
+
+let set_string dump str =
+  set_size_t dump (String.length str + 1);
+  write_block dump (Bytes.of_string str);
+  set_byte dump 0x00
+
+let rec dump_chunk dump chunk =
+  set_string dump chunk.name_chunk;
+  set_uint dump chunk.frst_line dump.int_size;
+  set_uint dump chunk.last_line dump.int_size;
+  set_byte dump chunk.numUpvals;
+  Printf.printf "numUpvals: %d\n" chunk.numUpvals;
+  set_byte dump chunk.numParams;
+  set_byte dump (if chunk.isVarg then 1 else 0);
+  set_byte dump chunk.maxStack;
+
+  (* Instructions *)
+  set_uint dump (List.length chunk.instructions) dump.int_size;
+  List.iter (fun instr -> match _encode_instr instr with
+    | Some encoded -> set_uint32 dump encoded
+    | None -> ()) chunk.instructions;
+
+  (* Constantes *)
+  set_uint dump (List.length chunk.constants) dump.int_size;
+  List.iter (fun constant ->
+    match constant.type_const with
+    | NIL -> set_byte dump 0
+    | BOOL ->
+        set_byte dump 1;
+        set_byte dump (if constant.data = "true" then 1 else 0)
+    | NUMBER ->
+        set_byte dump 3;
+        set_double dump (float_of_string constant.data)
+    | STRING ->
+        set_byte dump 4;
+        set_string dump constant.data
+  ) chunk.constants;
+
+  (* Prototypes *)
+  set_uint dump (List.length chunk.protos) dump.int_size;
+  List.iter (dump_chunk dump) chunk.protos;
+
+  (* Numéros de ligne *)
+  set_uint dump (List.length chunk.lineNums) dump.int_size;
+  List.iter (fun ln -> set_uint dump ln dump.int_size) chunk.lineNums;
+
+  (* Locaux *)
+  set_uint dump (List.length chunk.locals) dump.int_size;
+  List.iter (fun local ->
+    set_string dump local.name_local;
+    set_uint dump local.start dump.int_size;
+    set_uint dump local.end_pc dump.int_size
+  ) chunk.locals;
+
+  (* Upvalues *)
+  set_uint dump (List.length chunk.upvalues) dump.int_size;
+  List.iter (set_string dump) chunk.upvalues
+
+let dump_header dump =
+  write_block dump (Bytes.of_string _LUAMAGIC);
+  set_byte dump dump.vm_version;
+  set_byte dump dump.bytecode_format;
+  set_byte dump (if dump.big_endian then 0 else 1);
+  set_byte dump dump.int_size;
+  set_byte dump dump.size_t;
+  set_byte dump dump.instr_size;
+  set_byte dump dump.l_number_size;
+  set_byte dump (if dump.integral_flag then 1 else 0)
+
+let dump dump =
+  dump_header dump;
+  dump_chunk dump dump.root_chunk;
+  dump.bytecode
+
+let save_to_file filename bytecode =
+  let oc = open_out_bin filename in
+  output_bytes oc bytecode;
+  close_out oc;
+  Printf.printf "Bytecode écrit dans : %s\n" filename
+
 let () =
   if Array.length Sys.argv <> 2 then
     Printf.printf "Utilisation : %s <nom_fichier>\n" Sys.argv.(0)
   else
     let filename = Sys.argv.(1) in
     let chunk = load_file filename  in
-    print_chunk chunk
+    print_chunk chunk;
+    (* Création de l'objet lua_dump *)
+    let lua_dump = create_dump chunk in
+
+    (* Génération du bytecode *)
+    let bytecode = dump lua_dump in
+
+    (* Sauvegarde du bytecode dans un fichier *)
+    save_to_file "output.luac" bytecode
