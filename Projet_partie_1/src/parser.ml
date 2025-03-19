@@ -809,82 +809,823 @@ let save_to_file filename bytecode =
   close_out oc;
   Printf.printf "Bytecode écrit dans : %s\n" filename
 
+(* Définition des types *)
+type table = (string, constant) Hashtbl.t
+
+type value =
+  | Const of constant
+  | Table of table
+
 type vm_state = {
-  mutable stack : constant array;  (* Pile d'exécution *)
-  mutable globals : (string, constant) Hashtbl.t; (* Variables globales *)
+  mutable stack : value array;  (* Pile d'exécution *)
+  mutable globals : (string, value) Hashtbl.t; (* Variables globales *)
   mutable pc : int; (* Compteur de programme *)
   chunk : chunk; (* Chunk contenant le code et les constantes *)
 }
-  
+
+
+
+let execute_iterator args =
+  match args with
+  | [Const { type_const = STRING; data = start }; Const { type_const = NUMBER; data = idx }] -> 
+      let next_idx = string_of_int ((int_of_string idx) + 1) in
+      if next_idx = "10" then [Const { type_const = NIL; data = "" }]  (* Simule la fin de l'itération *)
+      else [Const { type_const = NUMBER; data = next_idx }]  (* Retourne la nouvelle valeur *)
+  | _ -> failwith "execute_iterator : Arguments invalides"
+
 let execute_instruction (vm : vm_state) =
   if vm.pc >= List.length vm.chunk.instructions then
     failwith "Erreur : dépassement du bytecode";
 
   let instr = List.nth vm.chunk.instructions vm.pc in
+    Printf.printf "Debug : pc = %d, instruction exécutée : %s\n"
+    vm.pc instr.name_instr;
   match instr.name_instr with
+  | "MOVE" -> (
+    match instr.a, instr.b with
+    | Some a, Some b ->
+        vm.stack.(a) <- vm.stack.(b);  (* R(A) := R(B) *)
+        vm.pc <- vm.pc + 1
+    | _ -> failwith "MOVE : paramètres invalides"
+  )
   | "LOADK" -> (
       match instr.a, instr.b with
       | Some a, Some bx ->
           let constant_value = List.nth vm.chunk.constants bx in
-          vm.stack.(a) <- constant_value;
+          vm.stack.(a) <- Const constant_value;
           vm.pc <- vm.pc + 1
       | _ -> failwith "LOADK : paramètres invalides"
     )
-    | "GETGLOBAL" -> (
-      match instr.a, instr.b with
-      | Some a, Some bx -> (
-          let key = List.nth vm.chunk.constants bx in
-          match Hashtbl.find_opt vm.globals key.data with
-          | Some value -> vm.stack.(a) <- value; vm.pc <- vm.pc + 1
-          | None -> failwith ("GETGLOBAL : Variable globale inconnue -> " ^ key.data)
-        )
-      | _ -> failwith "GETGLOBAL : paramètres invalides"
+  | "LOADBOOL" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c ->
+        let bool_value = if b = 1 then "true" else "false" in
+        Printf.printf "Debug LOADBOOL: R(%d) := %s (c=%d)\n" a bool_value c;
+        vm.stack.(a) <- Const { type_const = BOOL; data = bool_value };
+        if c <> 0 then vm.pc <- vm.pc + 1;
+        vm.pc <- vm.pc + 1
+    | _ -> failwith "LOADBOOL : paramètres invalides"
+  )
+  | "LOADNIL" -> (
+    match instr.a with
+    | Some a ->
+        vm.stack.(a) <- Const { type_const = NIL; data = "" };
+        vm.pc <- vm.pc + 1
+    | _ -> failwith "LOADNIL : paramètre invalide"
+  )
+  | "GETUPVAL" -> (
+    match instr.a, instr.b with
+      | Some a, Some b ->
+          let upvalue = List.nth vm.chunk.upvalues b in
+          vm.stack.(a) <- Const { type_const = STRING; data = upvalue };
+          vm.pc <- vm.pc + 1
+      | _ -> failwith "GETUPVAL : paramètres invalides"
     )
-  
-
-  | "ADD" -> (
+  | "GETGLOBAL" -> (
+    match instr.a, instr.b with
+    | Some a, Some bx -> (
+        let key = List.nth vm.chunk.constants bx in  (* Récupère la clé Kst(Bx) *)
+        match Hashtbl.find_opt vm.globals key.data with (* Cherche la valeur dans les globales *)
+        | Some value -> 
+            vm.stack.(a) <- value;  (* R(A) := Gbl[Kst(Bx)] *)
+            vm.pc <- vm.pc + 1
+        | None -> failwith ("GETGLOBAL : Variable globale inconnue -> " ^ key.data)
+      )
+    | _ -> failwith "GETGLOBAL : paramètres invalides"
+  )
+  | "GETTABLE" -> (
       match instr.a, instr.b, instr.c with
       | Some a, Some b, Some c -> (
-          match vm.stack.(b), vm.stack.(c) with
-          | { type_const = NUMBER; data = x }, { type_const = NUMBER; data = y } ->
-              let result = { type_const = NUMBER; data = string_of_float ((float_of_string x) +. (float_of_string y)) } in
-              vm.stack.(a) <- result;
+          match vm.stack.(b) with
+          | Table tbl -> 
+              let get_rk x =
+                if x < 256 then (
+                  if x < Array.length vm.stack then vm.stack.(x)
+                  else failwith ("GETTABLE : Index pile hors limites -> " ^ string_of_int x)
+                ) else (
+                  let k_index = x - 256 in
+                  if k_index < List.length vm.chunk.constants then
+                    Const (List.nth vm.chunk.constants k_index)
+                  else failwith ("GETTABLE : Index constante hors limites -> " ^ string_of_int k_index)
+                ) in
+              
+              (* Récupération de RK(C) *)
+              let rk_c = get_rk c in
+              
+              (* Extraction de la clé sous forme de chaîne *)
+              let key = match rk_c with
+                | Const { data } -> data  (* La clé doit être une constante *)
+                | _ -> failwith "GETTABLE : Clé invalide, doit être une constante"
+              in
+  
+              (* Accès à la table avec la clé *)
+              let value = match Hashtbl.find_opt tbl key with
+                | Some v -> v  (* R(A) := R(B)[RK(C)] *)
+                | None -> { type_const = NIL; data = "" }  (* Si la clé n'existe pas, R(A) = nil *)
+              in
+  
+              (* Stocker la valeur obtenue dans R(A) *)
+              vm.stack.(a) <- Const value;
+  
+              (* Avancer le compteur de programme *)
               vm.pc <- vm.pc + 1
-          | _ -> failwith "ADD : Opérandes non numériques"
+          | _ -> failwith "GETTABLE : R(B) n'est pas une table"
         )
-      | _ -> failwith "ADD : paramètres invalides"
+      | _ -> failwith "GETTABLE : paramètres invalides"
     )
+  | "SETGLOBAL" -> (
+    match instr.a, instr.b with
+    | Some a, Some bx -> (
+        let key = List.nth vm.chunk.constants bx in  (* Kst(Bx) *)
+        let value = vm.stack.(a) in  (* R(A) *)
+        Hashtbl.replace vm.globals key.data value;  (* Stocke directement `value` *)
+        vm.pc <- vm.pc + 1
+      )
+    | _ -> failwith "SETGLOBAL : paramètres invalides"
+  )
+  | "SETUPVAL" -> (
+    match instr.a, instr.b with
+    | Some a, Some b -> (
+        if b >= List.length vm.chunk.upvalues then
+          failwith ("SETUPVAL : Index d'UpValue invalide -> " ^ string_of_int b)
+        else (
+          let value = vm.stack.(a) in  (* R(A) *)
+          let upvalue_name = List.nth vm.chunk.upvalues b in  (* UpValue[B] *)
+          Hashtbl.replace vm.globals upvalue_name value;  (* Simule l'affectation d'UpValue *)
+          vm.pc <- vm.pc + 1
+        )
+      )
+    | _ -> failwith "SETUPVAL : paramètres invalides"
+  )
+  | "SETTABLE" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c when a < Array.length vm.stack -> (
+        match vm.stack.(a) with
+        | Table tbl -> (
+          let get_rk x =
+            if x < 256 then (
+              if x < Array.length vm.stack then vm.stack.(x)
+              else failwith ("EQ : Index pile hors limites -> " ^ string_of_int x)
+            ) else (
+              let k_index = x - 256 in
+              if k_index < List.length vm.chunk.constants then
+                Const (List.nth vm.chunk.constants k_index)
+              else failwith ("EQ : Index constante hors limites -> " ^ string_of_int k_index)
+            )
+          in
+          let rk_b = get_rk b in
+          let rk_c = get_rk c in
 
-    | "CALL" -> (
+            (* Vérifier que RK(B) est une clé STRING *)
+            let key = match rk_b with
+              | Const { data } -> data
+              | _ -> failwith "SETTABLE : RK(B) doit être une clé STRING"
+            in
+
+            (* Ajouter RK(C) dans la table *)
+            (match rk_c with
+            | Const constant -> Hashtbl.replace tbl key constant
+            | _ -> failwith "SETTABLE : RK(C) must be a constant");
+            vm.pc <- vm.pc + 1
+          )
+        | _ -> failwith "SETTABLE : R(A) doit être une table"
+      )
+    | _ -> failwith "SETTABLE : Paramètres invalides ou hors limites"
+  )
+  | "NEWTABLE" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c ->
+      let size = Int64.to_int (Int64.max (Int64.of_int b) (Int64.of_int c)) in
+        let new_table = Hashtbl.create size in  (* Crée une table vide avec taille estimée *)
+        vm.stack.(a) <- Table new_table;  (* Stocke la table dans R(A) *)
+        vm.pc <- vm.pc + 1
+    | _ -> failwith "NEWTABLE : paramètres invalides"
+  )
+  | "SELF" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c -> (
+        match vm.stack.(b) with
+        | Table tbl -> (
+            let key = match vm.stack.(c) with
+              | Const { data } -> data  (* RK(C) est une constante ou une valeur dans la pile *)
+              | _ -> failwith "SELF : Clé invalide"
+            in
+            let value = Hashtbl.find_opt tbl key in
+            vm.stack.(a + 1) <- Table tbl;  (* R(A+1) := R(B) *)
+            vm.stack.(a) <- (match value with 
+              | Some v -> Const v  (* R(A) := R(B)[RK(C)] *)
+              | None -> Const { type_const = NIL; data = "" }  (* Valeur absente -> nil *)
+            );
+            vm.pc <- vm.pc + 1
+        )
+        | _ -> failwith "SELF : R(B) n'est pas une table"
+      )
+    | _ -> failwith "SELF : paramètres invalides"
+  )
+  | "ADD" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c -> (
+        (* Récupération des valeurs RK(B) et RK(C) *)
+        let op1 =
+          if b < List.length vm.chunk.constants then
+            List.nth vm.chunk.constants b  (* RK(B) est une constante *)
+          else
+            (match vm.stack.(b) with
+            | Const constant -> constant
+            | _ -> failwith "ADD : Expected a constant value")  (* RK(B) est un registre *)
+        in
+        let op2 =
+          if c < List.length vm.chunk.constants then
+            List.nth vm.chunk.constants c  (* RK(C) est une constante *)
+          else
+            (match vm.stack.(c) with
+            | Const constant -> constant
+            | _ -> failwith "ADD : Expected a constant value")  (* RK(C) est un registre *)
+        in
+
+        (* Vérification des types et addition *)
+        match op1, op2 with
+        | { type_const = NUMBER; data = x }, { type_const = NUMBER; data = y } ->
+            let result = { type_const = NUMBER; data = string_of_float ((float_of_string x) +. (float_of_string y)) } in
+            vm.stack.(a) <- Const result;
+            vm.pc <- vm.pc + 1
+        | _ -> failwith "ADD : Opérandes non numériques"
+      )
+    | _ -> failwith "ADD : paramètres invalides"
+  )
+  | "SUB" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c -> (
+        (* Récupération des opérandes *)
+        let op1 =
+          if b < List.length vm.chunk.constants then
+            List.nth vm.chunk.constants b  (* RK(B) est une constante *)
+          else
+            (match vm.stack.(b) with
+            | Const constant -> constant
+            | _ -> failwith "SUB : Expected a constant value")  (* RK(B) est un registre *)
+        in
+        let op2 =
+          if c < List.length vm.chunk.constants then
+            List.nth vm.chunk.constants c  (* RK(C) est une constante *)
+          else
+            (match vm.stack.(c) with
+            | Const constant -> constant
+            | _ -> failwith "SUB : Expected a constant value")  (* RK(C) est un registre *)
+        in
+
+        (* Vérification des types et soustraction *)
+        match op1, op2 with
+        | { type_const = NUMBER; data = x }, { type_const = NUMBER; data = y } ->
+            let result = { type_const = NUMBER; data = string_of_float ((float_of_string x) -. (float_of_string y)) } in
+            vm.stack.(a) <- Const result;  (* Stocker le résultat dans R(A) *)
+            vm.pc <- vm.pc + 1
+        | _ -> failwith "SUB : Opérandes non numériques"
+      )
+    | _ -> failwith "SUB : paramètres invalides"
+  )
+  | "MUL" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c -> (
+        (* Récupération des valeurs RK(B) et RK(C) *)
+        let op1 =
+          if b < List.length vm.chunk.constants then
+            List.nth vm.chunk.constants b  (* RK(B) est une constante *)
+          else
+            (match vm.stack.(b) with
+            | Const constant -> constant  (* RK(B) est un registre *)
+            | _ -> failwith "MUL : RK(B) n'est pas un nombre")
+        in
+        let op2 =
+          if c < List.length vm.chunk.constants then
+            List.nth vm.chunk.constants c  (* RK(C) est une constante *)
+          else
+            (match vm.stack.(c) with
+            | Const constant -> constant  (* RK(C) est un registre *)
+            | _ -> failwith "MUL : RK(C) n'est pas un nombre")
+        in
+
+        (* Vérification des types et multiplication *)
+        match op1, op2 with
+        | { type_const = NUMBER; data = x }, { type_const = NUMBER; data = y } ->
+            let result = { type_const = NUMBER; data = string_of_float ((float_of_string x) *. (float_of_string y)) } in
+            vm.stack.(a) <- Const result;  (* R(A) := RK(B) * RK(C) *)
+            vm.pc <- vm.pc + 1
+        | _ -> failwith "MUL : Opérandes non numériques"
+      )
+    | _ -> failwith "MUL : paramètres invalides"
+  )
+  | "DIV" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c -> (
+        (* Récupération des valeurs RK(B) et RK(C) *)
+        let op1 =
+          if b < List.length vm.chunk.constants then
+            List.nth vm.chunk.constants b  (* RK(B) est une constante *)
+          else
+            (match vm.stack.(b) with
+            | Const constant -> constant
+            | _ -> failwith "DIV : Expected a constant value")  (* RK(B) est un registre *)
+        in
+        let op2 =
+          if c < List.length vm.chunk.constants then
+            List.nth vm.chunk.constants c  (* RK(C) est une constante *)
+          else
+            (match vm.stack.(c) with
+            | Const constant -> constant
+            | _ -> failwith "DIV : Expected a constant value")  (* RK(C) est un registre *)
+        in
+
+        (* Vérification des types et division *)
+        match op1, op2 with
+        | { type_const = NUMBER; data = x }, { type_const = NUMBER; data = y } ->
+            if float_of_string y = 0.0 then
+              failwith "DIV : Division par zéro"
+            else
+              let result = { type_const = NUMBER; data = string_of_float ((float_of_string x) /. (float_of_string y)) } in
+              vm.stack.(a) <- Const result;
+              vm.pc <- vm.pc + 1
+        | _ -> failwith "DIV : Opérandes non numériques"
+      )
+    | _ -> failwith "DIV : paramètres invalides"
+  )
+  | "MOD" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c -> (
+        (* Récupération des valeurs RK(B) et RK(C) *)
+        let op1 =
+          if b < List.length vm.chunk.constants then
+            List.nth vm.chunk.constants b  (* RK(B) est une constante *)
+          else
+            (match vm.stack.(b) with
+            | Const constant -> constant
+            | _ -> failwith "MOD : Expected a constant value")  (* RK(B) est un registre *)
+        in
+        let op2 =
+          if c < List.length vm.chunk.constants then
+            List.nth vm.chunk.constants c  (* RK(C) est une constante *)
+          else
+            (match vm.stack.(c) with
+            | Const constant -> constant
+            | _ -> failwith "MOD : Expected a constant value")  (* RK(C) est un registre *)
+        in
+
+        (* Vérification des types et calcul du modulo *)
+        match op1, op2 with
+        | { type_const = NUMBER; data = x }, { type_const = NUMBER; data = y } ->
+            if float_of_string y = 0.0 then
+              failwith "MOD : Division par zéro"
+            else
+              let result = { type_const = NUMBER; data = string_of_float (mod_float (float_of_string x) (float_of_string y)) } in
+              vm.stack.(a) <- Const result;
+              vm.pc <- vm.pc + 1
+        | _ -> failwith "MOD : Opérandes non numériques"
+      )
+    | _ -> failwith "MOD : paramètres invalides"
+  )
+  | "POW" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c -> (
+        (* Récupération des valeurs RK(B) et RK(C) *)
+        let op1 =
+          if b < List.length vm.chunk.constants then
+            List.nth vm.chunk.constants b  (* RK(B) est une constante *)
+          else
+            (match vm.stack.(b) with
+            | Const constant -> constant
+            | _ -> failwith "POW : Expected a constant value")  (* RK(B) est un registre *)
+        in
+        let op2 =
+          if c < List.length vm.chunk.constants then
+            List.nth vm.chunk.constants c  (* RK(C) est une constante *)
+          else
+            (match vm.stack.(c) with
+            | Const constant -> constant
+            | _ -> failwith "POW : Expected a constant value")  (* RK(C) est un registre *)
+        in
+
+        (* Vérification des types et calcul de la puissance *)
+        match op1, op2 with
+        | { type_const = NUMBER; data = x }, { type_const = NUMBER; data = y } ->
+            let result = { type_const = NUMBER; data = string_of_float ((float_of_string x) ** (float_of_string y)) } in
+            vm.stack.(a) <- Const result;
+            vm.pc <- vm.pc + 1
+        | _ -> failwith "POW : Opérandes non numériques"
+      )
+    | _ -> failwith "POW : paramètres invalides"
+  )
+  | "UNM" -> (
+    match instr.a, instr.b with
+    | Some a, Some b -> (
+        (* Récupération de la valeur R(B) *)
+        let op =
+          if b < List.length vm.chunk.constants then
+            List.nth vm.chunk.constants b  (* R(B) est une constante *)
+          else
+            (match vm.stack.(b) with
+            | Const constant -> constant
+            | _ -> failwith "UNM : Expected a constant value")  (* R(B) est un registre *)
+        in
+
+        (* Vérification du type et négation *)
+        match op with
+        | { type_const = NUMBER; data = x } ->
+            let result = { type_const = NUMBER; data = string_of_float (-. (float_of_string x)) } in
+            vm.stack.(a) <- Const result;
+            vm.pc <- vm.pc + 1
+        | _ -> failwith "UNM : Opérande non numérique"
+      )
+    | _ -> failwith "UNM : paramètres invalides"
+  )
+  | "NOT" -> (
+    match instr.a, instr.b with
+    | Some a, Some b -> (
+        (* Récupération de la valeur R(B) *)
+        let op = vm.stack.(b) in
+
+        (* Application de l'opération logique NOT *)
+        let result =
+          match op with
+          | Const { type_const = BOOL; data = "true" } -> Const { type_const = BOOL; data = "false" }
+          | Const { type_const = BOOL; data = "false" } -> Const { type_const = BOOL; data = "true" }
+          | Const { type_const = NIL; _ } -> Const { type_const = BOOL; data = "true" } (* Lua : `not nil` est `true` *)
+          | _ -> Const { type_const = BOOL; data = "false" } (* Lua : `not` de tout autre type est `false` *)
+        in
+
+        (* Stockage du résultat dans R(A) *)
+        vm.stack.(a) <- result;
+        vm.pc <- vm.pc + 1
+      )
+    | _ -> failwith "NOT : paramètres invalides"
+  )
+  | "LEN" -> (
+    match instr.a, instr.b with
+    | Some a, Some b -> (
+        match vm.stack.(b) with
+        | Const { type_const = STRING; data } ->  
+            let result = { type_const = NUMBER; data = string_of_int (String.length data) } in
+            vm.stack.(a) <- Const result  (* R(A) := longueur de la chaîne *)
+        | Table tbl ->  
+            let result = { type_const = NUMBER; data = string_of_int (Hashtbl.length tbl) } in
+            vm.stack.(a) <- Const result  (* R(A) := nombre d'éléments dans la table *)
+        | _ -> failwith "LEN : Opérande invalide, doit être une chaîne ou une table"
+      );
+      vm.pc <- vm.pc + 1
+    | _ -> failwith "LEN : paramètres invalides"
+  ) 
+  | "CONCAT" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c -> (
+        if b > c then failwith "CONCAT : B doit être inférieur ou égal à C"
+        else
+          let buffer = Buffer.create 16 in
+          for i = b to c do
+            match vm.stack.(i) with
+            | Const { type_const = STRING; data } -> Buffer.add_string buffer data
+            | Const { type_const = NUMBER; data } -> Buffer.add_string buffer data
+            | _ -> failwith "CONCAT : Opérande non concaténable"
+          done;
+          vm.stack.(a) <- Const { type_const = STRING; data = Buffer.contents buffer }; (* R(A) := R(B).. ... ..R(C) *)
+          vm.pc <- vm.pc + 1
+      )
+    | _ -> failwith "CONCAT : paramètres invalides"
+  )
+  | "JMP" -> (
+    match instr.b with
+    | Some sbx -> 
+        vm.pc <- vm.pc + sbx;
+    | _ -> failwith "JMP : paramètre invalide"
+  )
+  | "EQ" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c -> (
+        let get_rk x =
+          if x < 256 then (
+            if x < Array.length vm.stack then vm.stack.(x)
+            else failwith ("EQ : Index pile hors limites -> " ^ string_of_int x)
+          ) else (
+            let k_index = x - 256 in
+            if k_index < List.length vm.chunk.constants then
+              Const (List.nth vm.chunk.constants k_index)
+            else failwith ("EQ : Index constante hors limites -> " ^ string_of_int k_index)
+          )
+        in
+        let rk_b = get_rk b in
+        let rk_c = get_rk c in
+        (* Comparaison *)
+        let is_equal = match rk_b, rk_c with
+          | Const { data = x }, Const { data = y } -> x = y
+          | _ -> false
+        in
+        if is_equal <> (a <> 1) then (
+          Printf.printf "EQ : On saute 3 instructions\n";
+          vm.pc <- vm.pc + 2);
+          vm.pc <- vm.pc + 1
+      )
+    | _ -> failwith "EQ : paramètres invalides"
+  ) 
+  | "LT" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c -> (
+        let get_rk x =
+          if x < 256 then (
+            if x < Array.length vm.stack then vm.stack.(x)
+            else failwith ("LT : Index pile hors limites -> " ^ string_of_int x)
+          ) else (
+            let k_index = x - 256 in
+            if k_index < List.length vm.chunk.constants then
+              Const (List.nth vm.chunk.constants k_index)
+            else failwith ("LT : Index constante hors limites -> " ^ string_of_int k_index)
+          )
+        in
+
+        let rk_b = get_rk b in
+        let rk_c = get_rk c in
+
+        (* Extraction des valeurs *)
+        let get_number = function
+          | Const { type_const = NUMBER; data } -> float_of_string data
+          | _ -> failwith "LT : Opérandes non numériques"
+        in
+        let val_b = get_number rk_b in
+        let val_c = get_number rk_c in
+
+        (* Debug *)
+        Printf.printf "Debug: LT sur b = %f et c = %f\n" val_b val_c;
+
+        (* Comparaison *)
+        let is_less = val_b < val_c in
+        Printf.printf "Résultat de LT: %b (A=%d)\n" is_less a;
+
+        (* Gestion du saut *)
+        if is_less <> (a <> 1) then (
+          Printf.printf "LT : On saute 2 instructions\n";
+          vm.pc <- vm.pc + 2
+        );
+
+        vm.pc <- vm.pc + 1
+      )
+    | _ -> failwith "LT : paramètres invalides"
+  )
+  | "LE" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c -> (
+        let get_rk x =
+          if x < 256 then (
+            if x < Array.length vm.stack then vm.stack.(x)
+            else failwith ("LE : Index pile hors limites -> " ^ string_of_int x)
+          ) else (
+            let k_index = x - 256 in
+            if k_index < List.length vm.chunk.constants then
+              Const (List.nth vm.chunk.constants k_index)
+            else failwith ("LE : Index constante hors limites -> " ^ string_of_int k_index)
+          )
+        in
+        let rk_b = get_rk b in
+        let rk_c = get_rk c in
+        let is_lessAndEqual = match rk_b, rk_c with
+          | Const { data = x }, Const { data = y } -> x <= y
+          | _ -> false
+        in
+        Printf.printf "Résultat de LE: %b (A=%d)\n" is_lessAndEqual a;
+        if is_lessAndEqual <> (a <> 1) then (
+          Printf.printf "EQ : On saute 3 instructions\n";
+          vm.pc <- vm.pc + 2);
+          vm.pc <- vm.pc + 1
+      )
+    | _ -> failwith "LE : paramètres invalides"
+  )
+  | "TEST" -> (
+    match instr.a, instr.c with
+    | Some a, Some c -> (
+        (* Récupération de la valeur R(A) *)
+        let op = vm.stack.(a) in
+
+        (* Évaluation de la condition *)
+        let condition =
+          match op with
+          | Const { type_const = BOOL; data = "true" } -> true  (* BOOL stocke "true" ou "false" sous forme de STRING *)
+          | Const { type_const = BOOL; data = "false" } -> false
+          | Const { type_const = NIL; _ } -> false  (* NIL est toujours considéré comme faux *)
+          | _ -> true  (* Tout autre type est considéré comme vrai en Lua *)
+        in
+
+        (* Appliquer l'opération logique <=> avec C *)
+        let expected = (c = 1) in  (* Si C = 1, on teste si condition est vraie, sinon on teste si elle est fausse *)
+        let result = (condition = expected) in
+
+        (* Si le test échoue, on saute l'instruction suivante *)
+        if not result then vm.pc <- vm.pc + 1;
+        vm.pc <- vm.pc + 1
+      )
+    | _ -> failwith "TEST : paramètres invalides"
+  )
+  | "TESTSET" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c -> (
+        (* Récupération de la valeur R(B) *)
+        let op = vm.stack.(b) in
+
+        (* Évaluation de la condition *)
+        let condition =
+          match op with
+          | Const { type_const = BOOL; data = "true" } -> true  (* BOOL stocke "true" ou "false" sous forme de STRING *)
+          | Const { type_const = BOOL; data = "false" } -> false
+          | Const { type_const = NIL; _ } -> false  (* NIL est toujours considéré comme faux *)
+          | _ -> true  (* Tout autre type est considéré comme vrai en Lua *)
+        in
+
+        (* Appliquer l'opération logique <=> avec C *)
+        let expected = (c = 1) in  (* Si C = 1, on teste si condition est vraie, sinon on teste si elle est fausse *)
+        let result = (condition = expected) in
+
+        if result then
+          (* R(A) := R(B) *)
+          vm.stack.(a) <- vm.stack.(b)
+        else
+          (* Si le test échoue, on saute l'instruction suivante *)
+          vm.pc <- vm.pc + 1;
+
+        (* Passer à l'instruction suivante *)
+        vm.pc <- vm.pc + 1
+      )
+    | _ -> failwith "TESTSET : paramètres invalides"
+  )
+  (*call*)
+  | "CALL" -> (
     match instr.a, instr.b with
     | Some a, Some _ -> (
-        Printf.printf "Debug: CALL sur stack[%d] = %s\n" a vm.stack.(a).data;
-        match Hashtbl.find_opt vm.globals vm.stack.(a).data with
-        | Some { type_const = STRING; data = "print" } -> (
+        let stack_value = vm.stack.(a) in
+        Printf.printf "Debug: CALL sur stack[%d]\n" a;
+        match stack_value with
+        | Const { type_const = STRING; data = "print" } -> (
             match vm.stack.(a + 1) with
-            | { type_const = NUMBER; data } | { type_const = STRING; data } ->
-                Printf.printf "Résultat  %s\n" data;
-                print_endline data;
+            | Const { type_const = NUMBER; data } | Const { type_const = STRING; data } ->
+                Printf.printf "Résultat: %s\n" data;
                 vm.pc <- vm.pc + 1
-            | { type_const = NIL; _ } -> print_endline "nil"; vm.pc <- vm.pc + 1
-            | { type_const = BOOL; data } -> print_endline (if data = "true" then "true" else "false"); vm.pc <- vm.pc + 1
+            | Const { type_const = NIL; _ } -> print_endline "nil"; vm.pc <- vm.pc + 1
+            | Const { type_const = BOOL; data } -> print_endline (if data = "true" then "true" else "false"); vm.pc <- vm.pc + 1
+            | Table tbl -> (
+                Printf.printf "Table: %d éléments\n" (Hashtbl.length tbl);
+                Hashtbl.iter (fun key value -> Printf.printf "[%s] = %s\n" key (match Const value with Const { data } -> data | _ -> "unknown")) tbl;
+                vm.pc <- vm.pc + 1
+              )
           )
-        | Some _ -> failwith ("CALL : Fonction inconnue (non-print) -> " ^ vm.stack.(a).data)
-        | None -> failwith ("CALL : Fonction inexistante -> " ^ vm.stack.(a).data)
+        | Const { type_const = STRING; data } -> failwith ("CALL : Fonction inconnue (non-print) -> " ^ data)
+        | _ -> failwith "CALL : Fonction inexistante ou type invalide"
       )
     | _ -> failwith "CALL : paramètres invalides"
   )
+  (*tailcall*)
+  | "RETURN" -> 
+    vm.pc <- List.length vm.chunk.instructions (* Arrête l'exécution *)
+  | "FORLOOP" -> (
+    match instr.a, instr.b with
+    | Some a, Some sbx -> (
+        (* Récupération de R(A), R(A+1), et R(A+2) *)
+        match vm.stack.(a), vm.stack.(a+1), vm.stack.(a+2) with
+        | Const { type_const = NUMBER; data = x },
+          Const { type_const = NUMBER; data = limit },
+          Const { type_const = NUMBER; data = step } ->
 
+            (* Incrémentation : R(A) += R(A+2) *)
+            let new_value = (float_of_string x) +. (float_of_string step) in
+            vm.stack.(a) <- Const { type_const = NUMBER; data = string_of_float new_value };
 
-  | "RETURN" -> vm.pc <- List.length vm.chunk.instructions (* Arrête l'exécution *)
+            (* Vérification de la condition *)
+            if new_value <= float_of_string limit then (
+              (* Mise à jour de R(A+3) *)
+              vm.stack.(a+3) <- Const { type_const = NUMBER; data = string_of_float new_value };
+              (* Saut en arrière : pc += sBx *)
+              vm.pc <- vm.pc + sbx
+            ) else
+              (* Continuer l'exécution normalement *)
+              vm.pc <- vm.pc + 1
+        | _ -> failwith "FORLOOP : Types incompatibles pour la boucle"
+      )
+    | _ -> failwith "FORLOOP : paramètres invalides"
+  )
+  | "FORPREP" -> (
+    match instr.a, instr.b with
+    | Some a, Some sbx -> (
+        (* Récupération de R(A) et R(A+2) *)
+        match vm.stack.(a), vm.stack.(a+2) with
+        | Const { type_const = NUMBER; data = x }, Const { type_const = NUMBER; data = step } ->
+            (* Décrémentation : R(A) -= R(A+2) *)
+            let new_value = (float_of_string x) -. (float_of_string step) in
+            vm.stack.(a) <- Const { type_const = NUMBER; data = string_of_float new_value };
 
+            (* Mise à jour du PC *)
+            vm.pc <- vm.pc + sbx
+        | _ -> failwith "FORPREP : Types incompatibles pour la boucle"
+      )
+    | _ -> failwith "FORPREP : paramètres invalides"
+  )
+  | "TFORLOOP" -> (
+    match instr.a, instr.c with
+    | Some a, Some c -> (
+        (* R(A) est la fonction itérative *)
+        match vm.stack.(a) with
+        | Const { type_const = STRING; data = "iterator" } -> (
+            (* Supposons que l'itérateur Lua est stocké comme une fonction spéciale *)
+            let args = [ vm.stack.(a + 1); vm.stack.(a + 2) ] in
+            let results = execute_iterator args in  (* Exécute la fonction itérative *)
+            
+            (* Stocker les résultats dans R(A+3) à R(A+2+C) *)
+            let rec store_results i res_list = 
+              match res_list with
+              | [] -> ()
+              | r :: rs -> 
+                  if i <= c then (
+                    vm.stack.(a + 2 + i) <- r;
+                    store_results (i + 1) rs
+                  )
+            in
+            store_results 1 results;
+            
+            (* Vérifier si R(A+3) est nil *)
+            match vm.stack.(a + 3) with
+            | Const { type_const = NIL; _ } -> vm.pc <- vm.pc + 1  (* Passe à l'instruction suivante *)
+            | _ -> vm.stack.(a + 2) <- vm.stack.(a + 3)  (* R(A+2) := R(A+3) *)
+          )
+        | _ -> failwith "TFORLOOP : R(A) doit être un itérateur"
+      );
+      vm.pc <- vm.pc + 1
+    | _ -> failwith "TFORLOOP : paramètres invalides"
+  )
+  | "SETLIST" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c -> (
+        match vm.stack.(a) with
+        | Table tbl ->  
+            let fpf = 50 in  (* Fields Per Flush, généralement 50 *)
+            let base_index = (c - 1) * fpf in
+            for i = 1 to b do
+                let key = string_of_int (base_index + i) in
+                match vm.stack.(a + i) with
+                | Const value -> Hashtbl.replace tbl key value  (* R(A)[(C-1)*FPF + i] := R(A+i) *)
+                | Table t -> Hashtbl.replace tbl key { type_const = STRING; data = "table" }  (* Stocke une référence à la table *)
+            done;
+            vm.pc <- vm.pc + 1
+        | _ -> failwith "SETLIST : R(A) doit être une table"
+      )
+    | _ -> failwith "SETLIST : paramètres invalides"
+  )
+  | "CLOSE" -> (
+    match instr.a with
+    | Some a ->
+        (* Ferme toutes les variables dans la pile jusqu'à R(A) *)
+        for i = a to Array.length vm.stack - 1 do
+            vm.stack.(i) <- Const { type_const = NIL; data = "" } (* Remplace par NIL *)
+        done;
+        vm.pc <- vm.pc + 1
+    | _ -> failwith "CLOSE : paramètre invalide"
+  )
+  | "CLOSURE" -> (
+    match instr.a, instr.b with
+    | Some a, Some bx -> (
+        if bx >= List.length vm.chunk.protos then
+          failwith ("CLOSURE : Index de prototype invalide -> " ^ string_of_int bx)
+        else
+          let proto = List.nth vm.chunk.protos bx in  (* Récupérer KPROTO[Bx] *)
+          let closure = Table (Hashtbl.create 10) in  (* Crée une table représentant la closure *)
+          
+          (* Associer les upvalues R(A), ..., R(A+n) à la closure *)
+          for i = 0 to proto.numUpvals - 1 do
+            match vm.stack.(a + i) with
+            | Const upvalue ->  
+                Hashtbl.replace (match closure with Table tbl -> tbl | _ -> failwith "Erreur interne") 
+                                (string_of_int i) upvalue  
+            | _ -> failwith "CLOSURE : Upvalue invalide"
+          done;
+
+          vm.stack.(a) <- closure;  (* R(A) := closure(KPROTO[Bx], R(A), ..., R(A+n)) *)
+          vm.pc <- vm.pc + 1
+      )
+    | _ -> failwith "CLOSURE : paramètres invalides"
+  )
+  | "VARARG" -> (
+    match instr.a, instr.b with
+    | Some a, Some b ->
+        (* Vérifier que des arguments variadiques existent *)
+        if List.length vm.chunk.upvalues < b then
+          failwith "VARARG : Pas assez d'arguments variadiques"
+        else
+          (* Stocker les B arguments variadiques dans R(A) à R(A+B-1) *)
+          for i = 0 to b - 1 do
+            let vararg_value = List.nth vm.chunk.upvalues i in
+            vm.stack.(a + i) <- Const { type_const = STRING; data = vararg_value }
+          done;
+        vm.pc <- vm.pc + 1
+    | _ -> failwith "VARARG : paramètres invalides"
+  )
   | _ -> failwith ("Opcode inconnu : " ^ instr.name_instr)
 
-  let rec run_vm (vm : vm_state) =
-    if vm.pc < List.length vm.chunk.instructions then (
-      execute_instruction vm;
-      run_vm vm
-    )
+let rec run_vm (vm : vm_state) =
+  if vm.pc < List.length vm.chunk.instructions then (
+    execute_instruction vm;
+    run_vm vm
+  )
 
 let () =
   let test_dir = "../test" in  (* Chemin vers le répertoire contenant les fichiers .luac *)
@@ -914,12 +1655,12 @@ let () =
         
         Printf.printf "Fichier traité : %s -> %s\n" input_file output_file;
       let vm = {
-        stack = Array.make 10 { type_const = NIL; data = "" };
+        stack = Array.make 10 (Const { type_const = NIL; data = "" });
         globals = Hashtbl.create 10;
         pc = 0;
         chunk = chunk;
       } in
-      Hashtbl.add vm.globals "print" { type_const = STRING; data = "print" };
+      Hashtbl.add vm.globals "print" (Const { type_const = STRING; data = "print" });
       run_vm vm
   
     ) files
