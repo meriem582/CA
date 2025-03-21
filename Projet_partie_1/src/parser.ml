@@ -812,20 +812,27 @@ let save_to_file filename bytecode =
 (* Définition des types *)
 type table = (string, constant) Hashtbl.t
 
-type value =
+and func = { 
+  chunk : chunk;
+  global_function : (string, value) Hashtbl.t;
+  }
+
+and value =
   | Const of constant
   | Table of table
+  | Func of func
 
 type vm_state = {
   mutable stack : value array;  (* Pile d'exécution *)
   mutable globals : (string, value) Hashtbl.t; (* Variables globales *)
   mutable pc : int; (* Compteur de programme *)
-  chunk : chunk; (* Chunk contenant le code et les constantes *)
+  mutable chunk : chunk; (* Chunk contenant le code et les constantes *)
 }
 
 
 
-let execute_iterator args =
+
+let execute_iterator vm args =
   match args with
   | [Const { type_const = STRING; data = start }; Const { type_const = NUMBER; data = idx }] -> 
       let next_idx = string_of_int ((int_of_string idx) + 1) in
@@ -833,13 +840,15 @@ let execute_iterator args =
       else [Const { type_const = NUMBER; data = next_idx }]  (* Retourne la nouvelle valeur *)
   | _ -> failwith "execute_iterator : Arguments invalides"
 
-let execute_instruction (vm : vm_state) =
+  let rec execute_instruction vm instr =
   if vm.pc >= List.length vm.chunk.instructions then
     failwith "Erreur : dépassement du bytecode";
-
+  
   let instr = List.nth vm.chunk.instructions vm.pc in
-    Printf.printf "Debug : pc = %d, instruction exécutée : %s\n"
-    vm.pc instr.name_instr;
+  Printf.printf "Debug : pc = %d, instruction exécutée : %s, sBx = %s\n"
+    vm.pc instr.name_instr
+    (match instr.b with Some sbx -> string_of_int sbx | None -> "None");
+
   match instr.name_instr with
   | "MOVE" -> (
     match instr.a, instr.b with
@@ -860,16 +869,17 @@ let execute_instruction (vm : vm_state) =
     match instr.a, instr.b, instr.c with
     | Some a, Some b, Some c ->
         let bool_value = if b = 1 then "true" else "false" in
-        Printf.printf "Debug LOADBOOL: R(%d) := %s (c=%d)\n" a bool_value c;
         vm.stack.(a) <- Const { type_const = BOOL; data = bool_value };
         if c <> 0 then vm.pc <- vm.pc + 1;
         vm.pc <- vm.pc + 1
     | _ -> failwith "LOADBOOL : paramètres invalides"
   )
   | "LOADNIL" -> (
-    match instr.a with
-    | Some a ->
-        vm.stack.(a) <- Const { type_const = NIL; data = "" };
+    match instr.a, instr.b with
+    | Some a, Some b ->
+        for i = a to b do
+          vm.stack.(i) <- Const { type_const = NIL; data = "" }
+        done;
         vm.pc <- vm.pc + 1
     | _ -> failwith "LOADNIL : paramètre invalide"
   )
@@ -884,12 +894,15 @@ let execute_instruction (vm : vm_state) =
   | "GETGLOBAL" -> (
     match instr.a, instr.b with
     | Some a, Some bx -> (
-        let key = List.nth vm.chunk.constants bx in  (* Récupère la clé Kst(Bx) *)
-        match Hashtbl.find_opt vm.globals key.data with (* Cherche la valeur dans les globales *)
-        | Some value -> 
-            vm.stack.(a) <- value;  (* R(A) := Gbl[Kst(Bx)] *)
-            vm.pc <- vm.pc + 1
-        | None -> failwith ("GETGLOBAL : Variable globale inconnue -> " ^ key.data)
+      let cons = get_constant vm.chunk bx in
+      let key = match cons.type_const with
+        | STRING -> cons.data
+        | _ -> failwith "Type error in GETGLOBAL"
+      in
+      vm.stack.(a) <- (match Hashtbl.find_opt vm.globals key with
+                        | Some v -> v
+                        | None -> Const { type_const = NIL; data = "" });
+      vm.pc <- vm.pc + 1  
       )
     | _ -> failwith "GETGLOBAL : paramètres invalides"
   )
@@ -912,21 +925,37 @@ let execute_instruction (vm : vm_state) =
               (* Récupération de RK(C) *)
               let rk_c = get_rk c in
               
-              (* Extraction de la clé sous forme de chaîne *)
+              (* Extraction et normalisation de la clé *)
               let key = match rk_c with
-                | Const { data } -> data  (* La clé doit être une constante *)
+                | Const { data } -> (
+                    try 
+                      (* 🔥 Si c'est un nombre, on le normalise pour SETLIST 🔥 *)
+                      string_of_int (int_of_float (float_of_string data))
+                    with Failure _ ->
+                      (* 🔥 Sinon, on le laisse tel quel pour les chaînes 🔥 *)
+                      data
+                  )
                 | _ -> failwith "GETTABLE : Clé invalide, doit être une constante"
               in
-  
+
+              (* Debugging: Afficher la clé recherchée *)
+              Printf.printf "Debug: GETTABLE - Recherche tbl[%s]\n" key;
+
               (* Accès à la table avec la clé *)
               let value = match Hashtbl.find_opt tbl key with
                 | Some v -> v  (* R(A) := R(B)[RK(C)] *)
-                | None -> { type_const = NIL; data = "" }  (* Si la clé n'existe pas, R(A) = nil *)
+                | None -> 
+                  Printf.printf "Debug: GETTABLE - Clé introuvable %s, retour nil\n" key;
+                  { type_const = NIL; data = "" }  (* Si la clé n'existe pas, R(A) = nil *)
               in
-  
+
+              (* Debugging: Afficher la valeur trouvée *)
+              Printf.printf "Debug: GETTABLE - tbl[%s] -> %s\n" key 
+                (match value with { data } -> data );
+
               (* Stocker la valeur obtenue dans R(A) *)
               vm.stack.(a) <- Const value;
-  
+
               (* Avancer le compteur de programme *)
               vm.pc <- vm.pc + 1
           | _ -> failwith "GETTABLE : R(B) n'est pas une table"
@@ -1453,74 +1482,184 @@ let execute_instruction (vm : vm_state) =
   )
   (*call*)
   | "CALL" -> (
-    match instr.a, instr.b with
-    | Some a, Some _ -> (
-        let stack_value = vm.stack.(a) in
-        Printf.printf "Debug: CALL sur stack[%d]\n" a;
-        match stack_value with
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c -> (
+        match vm.stack.(a) with
         | Const { type_const = STRING; data = "print" } -> (
             match vm.stack.(a + 1) with
             | Const { type_const = NUMBER; data } | Const { type_const = STRING; data } ->
                 Printf.printf "Résultat: %s\n" data;
                 vm.pc <- vm.pc + 1
-            | Const { type_const = NIL; _ } -> print_endline "nil"; vm.pc <- vm.pc + 1
+            | Const { type_const = NIL; _ } -> print_endline ""; vm.pc <- vm.pc + 1
             | Const { type_const = BOOL; data } -> print_endline (if data = "true" then "true" else "false"); vm.pc <- vm.pc + 1
             | Table tbl -> (
                 Printf.printf "Table: %d éléments\n" (Hashtbl.length tbl);
                 Hashtbl.iter (fun key value -> Printf.printf "[%s] = %s\n" key (match Const value with Const { data } -> data | _ -> "unknown")) tbl;
                 vm.pc <- vm.pc + 1
               )
+            | _ -> failwith "CALL : Type non supporté par print"
           )
         | Const { type_const = STRING; data } -> failwith ("CALL : Fonction inconnue (non-print) -> " ^ data)
-        | _ -> failwith "CALL : Fonction inexistante ou type invalide"
+        | Func func -> (
+            let new_vm = { 
+                stack = Array.make 10 (Const { type_const = NIL; data = "" });
+                pc = 0;
+                globals = func.global_function;
+                chunk = func.chunk;
+            } in
+
+            (* Copier les arguments vers la nouvelle pile *)
+            for i = 1 to (b - 1) do
+                new_vm.stack.(i - 1) <- vm.stack.(a + i)
+            done;
+            run_vm new_vm new_vm.chunk;
+            if c > 0 then
+                vm.stack.(a) <- new_vm.stack.(0);
+
+            ()
+        )
+
+        | _ -> 
+            Printf.printf "Erreur : la valeur sur la pile n'est pas une fonction (type : %s)\n%!" 
+                (match vm.stack.(a) with
+                | Const { type_const = NIL; _ } -> "Nil"
+                | Const { type_const = BOOL; _ } -> "Bool"
+                | Const { type_const = NUMBER; _ } -> "Number"
+                | Const { type_const = STRING; _ } -> "String"
+                | Table _ -> "Table"
+                | Func _ -> "Function");
+        vm.pc <- vm.pc + 1
       )
     | _ -> failwith "CALL : paramètres invalides"
   )
+
+  
   (*tailcall*)
-  | "RETURN" -> 
-    vm.pc <- List.length vm.chunk.instructions (* Arrête l'exécution *)
-  | "FORLOOP" -> (
-    match instr.a, instr.b with
-    | Some a, Some sbx -> (
-        (* Récupération de R(A), R(A+1), et R(A+2) *)
-        match vm.stack.(a), vm.stack.(a+1), vm.stack.(a+2) with
-        | Const { type_const = NUMBER; data = x },
-          Const { type_const = NUMBER; data = limit },
-          Const { type_const = NUMBER; data = step } ->
+  | "TAILCALL" -> (
+    match instr.a, instr.b, instr.c with
+    | Some a, Some b, Some c -> (
+        match vm.stack.(a) with
+        | Func func -> (
+            for i = 1 to b do
+              vm.stack.(i - 1) <- vm.stack.(a + i)
+            done;
+            vm.pc <- 0; 
+            vm.chunk <- func.chunk;
+            run_vm vm func.chunk;
+            if c > 0 then
+              vm.stack.(a) <- vm.stack.(0);
+            vm.pc <- List.length vm.chunk.instructions
+        )
 
-            (* Incrémentation : R(A) += R(A+2) *)
-            let new_value = (float_of_string x) +. (float_of_string step) in
-            vm.stack.(a) <- Const { type_const = NUMBER; data = string_of_float new_value };
+        | Const { type_const = STRING; data = "print" } -> (
+            let rec print_args i =
+              if i < Array.length vm.stack && vm.stack.(i) <> Const { type_const = NIL; data = "" } then (
+                print_string (match vm.stack.(i) with
+                  | Const { data } -> data
+                  | _ -> failwith "TAILCALL : Type non supporté par print");
+                print_string " ";
+                print_args (i + 1)
+              )
+            in
+            print_args (a + 1);
+            print_newline ();
+            for i = a + 1 to Array.length vm.stack - 1 do
+              vm.stack.(i) <- Const { type_const = NIL; data = "" }
+            done;
 
-            (* Vérification de la condition *)
-            if new_value <= float_of_string limit then (
-              (* Mise à jour de R(A+3) *)
-              vm.stack.(a+3) <- Const { type_const = NUMBER; data = string_of_float new_value };
-              (* Saut en arrière : pc += sBx *)
-              vm.pc <- vm.pc + sbx
-            ) else
-              (* Continuer l'exécution normalement *)
-              vm.pc <- vm.pc + 1
-        | _ -> failwith "FORLOOP : Types incompatibles pour la boucle"
+            vm.stack.(0) <- Const { type_const = NIL; data = "" };
+            vm.pc <- List.length vm.chunk.instructions
+        )
+
+        | _ -> 
+            Printf.printf "Erreur : la valeur sur la pile n'est pas une fonction (type : %s)\n%!" 
+              (match vm.stack.(a) with
+               | Const { type_const = NIL; _ } -> "Nil"
+               | Const { type_const = BOOL; _ } -> "Bool"
+               | Const { type_const = NUMBER; _ } -> "Number"
+               | Const { type_const = STRING; _ } -> "String"
+               | Table _ -> "Table"
+               | Func _ -> "Function");
+            failwith "Type error in TAILCALL"
       )
-    | _ -> failwith "FORLOOP : paramètres invalides"
+    | _ -> failwith "TAILCALL : paramètres invalides"
   )
+
+
+  | "RETURN" -> (
+    match instr.a, instr.b with
+    | Some a, Some b -> (
+        let n =
+          if b = 0 then Array.length vm.stack - a
+          else b - 1
+        in
+        for i = 0 to n - 1 do
+          vm.stack.(i) <- vm.stack.(a + i)
+        done;
+        vm.pc <- List.length vm.chunk.instructions  (* Arrêter l'exécution *)
+      )
+    | _ -> failwith "RETURN : paramètres invalides"
+  )
+(*
   | "FORPREP" -> (
-    match instr.a, instr.b with
-    | Some a, Some sbx -> (
-        (* Récupération de R(A) et R(A+2) *)
-        match vm.stack.(a), vm.stack.(a+2) with
-        | Const { type_const = NUMBER; data = x }, Const { type_const = NUMBER; data = step } ->
-            (* Décrémentation : R(A) -= R(A+2) *)
-            let new_value = (float_of_string x) -. (float_of_string step) in
-            vm.stack.(a) <- Const { type_const = NUMBER; data = string_of_float new_value };
+      match instr.a, instr.b with
+      | Some a, Some sbx -> (
+          Printf.printf "Debug : FORPREP saute de %d instructions depuis pc = %d\n" sbx vm.pc;
+  
+          (* Vérifie que le saut pointe bien vers FORLOOP *)
+          let target_pc = vm.pc + sbx in
+          if target_pc < List.length vm.chunk.instructions then
+            let target_instr = List.nth vm.chunk.instructions target_pc in
+            if target_instr.name_instr = "FORLOOP" then (
+              Printf.printf "✅ FORPREP saute bien vers FORLOOP à pc = %d\n" target_pc;
+              vm.pc <- target_pc
+            ) else (
+              failwith (Printf.sprintf "FORPREP : Mauvaise cible (pc = %d, attendu FORLOOP, trouvé %s)"
+                target_pc target_instr.name_instr)
+            )
+          else
+            failwith "FORPREP : sBx invalide, dépasse le bytecode"
+        )
+      | _ -> failwith "FORPREP : paramètres invalides"
+    )
 
-            (* Mise à jour du PC *)
-            vm.pc <- vm.pc + sbx
-        | _ -> failwith "FORPREP : Types incompatibles pour la boucle"
-      )
-    | _ -> failwith "FORPREP : paramètres invalides"
-  )
+  | "FORLOOP" -> (
+      match instr.a, instr.b with
+      | Some a, Some sbx -> (
+          Printf.printf "Debug : FORLOOP sur R(%d), sBx = %d\n" a sbx;
+          
+          (* Récupération de R(A) (compteur), R(A+1) (limite) et R(A+2) (pas) *)
+          match vm.stack.(a), vm.stack.(a+1), vm.stack.(a+2) with
+          | Const { type_const = NUMBER; data = counter },
+            Const { type_const = NUMBER; data = limit },
+            Const { type_const = NUMBER; data = step } ->
+  
+              (* Incrémentation : R(A) += R(A+2) *)
+              let new_value = (float_of_string counter) +. (float_of_string step) in
+              vm.stack.(a) <- Const { type_const = NUMBER; data = string_of_float new_value };
+  
+              (* Vérification de la condition de boucle *)
+              if (float_of_string step) > 0.0 then
+                  (* Cas croissant : continue si R(A) <= R(A+1) *)
+                  if new_value <= float_of_string limit then (
+                      vm.stack.(a+3) <- Const { type_const = NUMBER; data = string_of_float new_value };
+                      vm.pc <- vm.pc + sbx  (* Retourne au début du bloc for *)
+                  ) else (
+                      vm.pc <- vm.pc + 1  (* Fin de la boucle *)
+                  )
+              else
+                  (* Cas décroissant : continue si R(A) >= R(A+1) *)
+                  if new_value >= float_of_string limit then (
+                      vm.stack.(a+3) <- Const { type_const = NUMBER; data = string_of_float new_value };
+                      vm.pc <- vm.pc + sbx  (* Retourne au début du bloc for *)
+                  ) else (
+                      vm.pc <- vm.pc + 1  (* Fin de la boucle *)
+                  )
+          | _ -> failwith "FORLOOP : Types incompatibles pour la boucle"
+        )
+      | _ -> failwith "FORLOOP : paramètres invalides"
+    )
+  
   | "TFORLOOP" -> (
     match instr.a, instr.c with
     | Some a, Some c -> (
@@ -1553,6 +1692,7 @@ let execute_instruction (vm : vm_state) =
       vm.pc <- vm.pc + 1
     | _ -> failwith "TFORLOOP : paramètres invalides"
   )
+  *)
   | "SETLIST" -> (
     match instr.a, instr.b, instr.c with
     | Some a, Some b, Some c -> (
@@ -1560,17 +1700,26 @@ let execute_instruction (vm : vm_state) =
         | Table tbl ->  
             let fpf = 50 in  (* Fields Per Flush, généralement 50 *)
             let base_index = (c - 1) * fpf in
+            Printf.printf "Debug: SETLIST - Insère %d valeurs à partir de l'index %d\n" b base_index;
+            
             for i = 1 to b do
                 let key = string_of_int (base_index + i) in
                 match vm.stack.(a + i) with
-                | Const value -> Hashtbl.replace tbl key value  (* R(A)[(C-1)*FPF + i] := R(A+i) *)
-                | Table t -> Hashtbl.replace tbl key { type_const = STRING; data = "table" }  (* Stocke une référence à la table *)
-            done;
+                | Const value -> 
+                    Printf.printf "Debug: SETLIST - tbl[%s] := %s\n" key value.data;
+                    Hashtbl.replace tbl key value
+                | Table t -> 
+                    Printf.printf "Debug: SETLIST - tbl[%s] := <table>\n" key;
+                    Hashtbl.replace tbl key { type_const = STRING; data = "<table>" }
+                | _ -> failwith "SETLIST : Valeur non supportée"
+                  done;
+
             vm.pc <- vm.pc + 1
         | _ -> failwith "SETLIST : R(A) doit être une table"
       )
     | _ -> failwith "SETLIST : paramètres invalides"
   )
+
   | "CLOSE" -> (
     match instr.a with
     | Some a ->
@@ -1584,26 +1733,18 @@ let execute_instruction (vm : vm_state) =
   | "CLOSURE" -> (
     match instr.a, instr.b with
     | Some a, Some bx -> (
-        if bx >= List.length vm.chunk.protos then
-          failwith ("CLOSURE : Index de prototype invalide -> " ^ string_of_int bx)
-        else
-          let proto = List.nth vm.chunk.protos bx in  (* Récupérer KPROTO[Bx] *)
-          let closure = Table (Hashtbl.create 10) in  (* Crée une table représentant la closure *)
-          
-          (* Associer les upvalues R(A), ..., R(A+n) à la closure *)
-          for i = 0 to proto.numUpvals - 1 do
-            match vm.stack.(a + i) with
-            | Const upvalue ->  
-                Hashtbl.replace (match closure with Table tbl -> tbl | _ -> failwith "Erreur interne") 
-                                (string_of_int i) upvalue  
-            | _ -> failwith "CLOSURE : Upvalue invalide"
-          done;
-
-          vm.stack.(a) <- closure;  (* R(A) := closure(KPROTO[Bx], R(A), ..., R(A+n)) *)
-          vm.pc <- vm.pc + 1
+        (* Récupération du prototype de fonction *)
+        let proto = List.nth vm.chunk.protos bx in
+        
+        (* Création de la fermeture et stockage dans R(A) *)
+        vm.stack.(a) <- Func { chunk = proto; global_function = Hashtbl.copy vm.globals };
+        
+        (* Passage à l'instruction suivante *)
+        vm.pc <- vm.pc + 1
       )
     | _ -> failwith "CLOSURE : paramètres invalides"
   )
+
   | "VARARG" -> (
     match instr.a, instr.b with
     | Some a, Some b ->
@@ -1620,12 +1761,23 @@ let execute_instruction (vm : vm_state) =
     | _ -> failwith "VARARG : paramètres invalides"
   )
   | _ -> failwith ("Opcode inconnu : " ^ instr.name_instr)
+and run_vm vm chunk =
+  vm.chunk <- chunk;
+  vm.pc <- 0;
+  while vm.pc < List.length chunk.instructions do
+    let instr = List.nth chunk.instructions vm.pc in
+    execute_instruction vm instr;
+  done
 
-let rec run_vm (vm : vm_state) =
-  if vm.pc < List.length vm.chunk.instructions then (
-    execute_instruction vm;
-    run_vm vm
-  )
+let init_vm =
+  let vm = {
+        stack = Array.make 10 (Const { type_const = NIL; data = "" });
+        globals = Hashtbl.create 10;
+        pc = 0;
+        chunk = create_chunk();
+      } in
+      Hashtbl.add vm.globals "print" (Const { type_const = STRING; data = "print" });
+      vm
 
 let () =
   let test_dir = "../test" in  (* Chemin vers le répertoire contenant les fichiers .luac *)
@@ -1654,14 +1806,11 @@ let () =
         save_to_file output_file bytecode;
         
         Printf.printf "Fichier traité : %s -> %s\n" input_file output_file;
-      let vm = {
-        stack = Array.make 10 (Const { type_const = NIL; data = "" });
-        globals = Hashtbl.create 10;
-        pc = 0;
-        chunk = chunk;
-      } in
-      Hashtbl.add vm.globals "print" (Const { type_const = STRING; data = "print" });
-      run_vm vm
+      
+      
+        let vm=init_vm in
+        run_vm vm chunk;
+        Printf.printf "Execution terminée\n";
   
     ) files
   else
