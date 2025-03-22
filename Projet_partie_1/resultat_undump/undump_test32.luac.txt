@@ -1,0 +1,34 @@
+
+===========+ HEADER +===========
+VM Version        : 81
+Bytecode Format   : 0
+index             : 177
+Big Endian        : false
+Int Size          : 4
+Size_t Size       : 8
+Instruction Size  : 4
+Lua Number Size   : 8
+Integral Flag     : 0 (F)
+==================================
+
+===========+ Chunk: @test32.lua +===========
+
+==== [[ constants ]] ====
+
+[0]: [STRING] print
+[1]: [STRING] a est vrai
+
+==== [[ locals ]] ====
+
+R[0]: a
+
+==== [[ Instructions ]] ====
+
+[0]   LOADBOOL :      0      1      0       ; 
+[1]       TEST :      0      0      0       ; if not R[0] <=> 0 pc++
+[2]        JMP :   R[0]      3              ; jump to 3
+[3]  GETGLOBAL :   R[1]   K[0]              ; move _G["print"] into R[1]
+[4]      LOADK :   R[2]   K[1]              ; load "a est vrai" into R[2]
+[5]       CALL :      1      2      1       ; 
+[6]     RETURN :      0      1      0       ; 
+==================================

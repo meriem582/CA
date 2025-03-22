@@ -1,0 +1,36 @@
+
+===========+ HEADER +===========
+VM Version        : 81
+Bytecode Format   : 0
+index             : 183
+Big Endian        : false
+Int Size          : 4
+Size_t Size       : 8
+Instruction Size  : 4
+Lua Number Size   : 8
+Integral Flag     : 0 (F)
+==================================
+
+===========+ Chunk: @test30.lua +===========
+
+==== [[ constants ]] ====
+
+[0]: [NUMBER] 5.
+[1]: [NUMBER] 10.
+[2]: [STRING] print
+
+==== [[ locals ]] ====
+
+R[0]: a
+
+==== [[ Instructions ]] ====
+
+[0]         LT :  R[1]    K[0]   K[1]       ; if R[K[0]] < R[K[1]] then pc++
+[1]        JMP :   R[0]      1              ; jump to 1
+[2]   LOADBOOL :      0      0      1       ; 
+[3]   LOADBOOL :      0      1      0       ; 
+[4]  GETGLOBAL :   R[1]   K[2]              ; move _G["print"] into R[1]
+[5]       MOVE :      2      0      0       ; move R[0] into R[2]
+[6]       CALL :      1      2      1       ; 
+[7]     RETURN :      0      1      0       ; 
+==================================

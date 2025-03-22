@@ -1,0 +1,42 @@
+
+===========+ HEADER +===========
+VM Version        : 81
+Bytecode Format   : 0
+index             : 237
+Big Endian        : false
+Int Size          : 4
+Size_t Size       : 8
+Instruction Size  : 4
+Lua Number Size   : 8
+Integral Flag     : 0 (F)
+==================================
+
+===========+ Chunk: @test35.lua +===========
+
+==== [[ constants ]] ====
+
+[0]: [NUMBER] 1.
+[1]: [NUMBER] 2.
+[2]: [NUMBER] 3.
+[3]: [NUMBER] 4.
+[4]: [NUMBER] 5.
+[5]: [STRING] print
+
+==== [[ locals ]] ====
+
+R[0]: list
+
+==== [[ Instructions ]] ====
+
+[0]   NEWTABLE :      0      5      0       ; 
+[1]      LOADK :   R[1]   K[0]              ; load 1. into R[1]
+[2]      LOADK :   R[2]   K[1]              ; load 2. into R[2]
+[3]      LOADK :   R[3]   K[2]              ; load 3. into R[3]
+[4]      LOADK :   R[4]   K[3]              ; load 4. into R[4]
+[5]      LOADK :   R[5]   K[4]              ; load 5. into R[5]
+[6]    SETLIST :      0      5      1       ; 
+[7]  GETGLOBAL :   R[1]   K[5]              ; move _G["print"] into R[1]
+[8]   GETTABLE :   R[2]      0   K[0]       ; 
+[9]       CALL :      1      2      1       ; 
+[10]     RETURN :      0      1      0       ; 
+==================================

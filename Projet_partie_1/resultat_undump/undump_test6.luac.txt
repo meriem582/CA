@@ -1,0 +1,60 @@
+
+===========+ HEADER +===========
+VM Version        : 81
+Bytecode Format   : 0
+index             : 348
+Big Endian        : false
+Int Size          : 4
+Size_t Size       : 8
+Instruction Size  : 4
+Lua Number Size   : 8
+Integral Flag     : 0 (F)
+==================================
+
+===========+ Chunk: @test6.lua +===========
+
+==== [[ constants ]] ====
+
+[0]: [STRING] add
+[1]: [NUMBER] 3.
+[2]: [NUMBER] 5.
+[3]: [STRING] print
+[4]: [STRING] Résultat:
+
+==== [[ locals ]] ====
+
+R[0]: result
+
+==== [[ Instructions ]] ====
+
+[0]    CLOSURE :   R[0]      0              ; 
+[1]  SETGLOBAL :   R[0]   K[0]              ; 
+[2]  GETGLOBAL :   R[0]   K[0]              ; move _G["add"] into R[0]
+[3]      LOADK :   R[1]   K[1]              ; load 3. into R[1]
+[4]      LOADK :   R[2]   K[2]              ; load 5. into R[2]
+[5]       CALL :      0      3      2       ; 
+[6]  GETGLOBAL :   R[1]   K[3]              ; move _G["print"] into R[1]
+[7]      LOADK :   R[2]   K[4]              ; load "Résultat:" into R[2]
+[8]       MOVE :      3      0      0       ; move R[0] into R[3]
+[9]       CALL :      1      3      1       ; 
+[10]     RETURN :      0      1      0       ; 
+
+==== [[ protos ]] ====
+
+
+===========+ Chunk:  +===========
+
+==== [[ constants ]] ====
+
+
+==== [[ locals ]] ====
+
+R[0]: a
+R[1]: b
+
+==== [[ Instructions ]] ====
+
+[0]        ADD :  R[2]    R[0]   R[1]       ; add R[1] to R[0], place into R[2]
+[1]     RETURN :      2      2      0       ; 
+[2]     RETURN :      0      1      0       ; 
+==================================

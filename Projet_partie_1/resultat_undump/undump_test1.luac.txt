@@ -1,0 +1,54 @@
+
+===========+ HEADER +===========
+VM Version        : 81
+Bytecode Format   : 0
+index             : 289
+Big Endian        : false
+Int Size          : 4
+Size_t Size       : 8
+Instruction Size  : 4
+Lua Number Size   : 8
+Integral Flag     : 0 (F)
+==================================
+
+===========+ Chunk: @test1.lua +===========
+
+==== [[ constants ]] ====
+
+[0]: [STRING] c
+[1]: [STRING] Global!
+
+==== [[ locals ]] ====
+
+R[0]: f
+
+==== [[ Instructions ]] ====
+
+[0]      LOADK :   R[0]   K[1]              ; load "Global!" into R[0]
+[1]  SETGLOBAL :   R[0]   K[0]              ; 
+[2]    CLOSURE :   R[0]      0              ; 
+[3]     RETURN :      0      1      0       ; 
+
+==== [[ protos ]] ====
+
+
+===========+ Chunk:  +===========
+
+==== [[ constants ]] ====
+
+[0]: [NUMBER] 42.
+[1]: [STRING] print
+
+==== [[ locals ]] ====
+
+R[0]: b
+R[1]: a
+
+==== [[ Instructions ]] ====
+
+[0]      LOADK :   R[1]   K[0]              ; load 42. into R[1]
+[1]  GETGLOBAL :   R[2]   K[1]              ; move _G["print"] into R[2]
+[2]       MOVE :      3      1      0       ; move R[1] into R[3]
+[3]       CALL :      2      2      1       ; 
+[4]     RETURN :      0      1      0       ; 
+==================================

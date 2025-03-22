@@ -1,0 +1,33 @@
+
+===========+ HEADER +===========
+VM Version        : 81
+Bytecode Format   : 0
+index             : 160
+Big Endian        : false
+Int Size          : 4
+Size_t Size       : 8
+Instruction Size  : 4
+Lua Number Size   : 8
+Integral Flag     : 0 (F)
+==================================
+
+===========+ Chunk: @test15.lua +===========
+
+==== [[ constants ]] ====
+
+[0]: [STRING] global_var
+[1]: [NUMBER] 50.
+[2]: [STRING] print
+
+==== [[ locals ]] ====
+
+
+==== [[ Instructions ]] ====
+
+[0]      LOADK :   R[0]   K[1]              ; load 50. into R[0]
+[1]  SETGLOBAL :   R[0]   K[0]              ; 
+[2]  GETGLOBAL :   R[0]   K[2]              ; move _G["print"] into R[0]
+[3]  GETGLOBAL :   R[1]   K[0]              ; move _G["global_var"] into R[1]
+[4]       CALL :      0      2      1       ; 
+[5]     RETURN :      0      1      0       ; 
+==================================

@@ -1,0 +1,61 @@
+
+===========+ HEADER +===========
+VM Version        : 81
+Bytecode Format   : 0
+index             : 349
+Big Endian        : false
+Int Size          : 4
+Size_t Size       : 8
+Instruction Size  : 4
+Lua Number Size   : 8
+Integral Flag     : 0 (F)
+==================================
+
+===========+ Chunk: @test12.lua +===========
+
+==== [[ constants ]] ====
+
+[0]: [STRING] greet
+[1]: [STRING] Alice
+[2]: [STRING] Bob
+
+==== [[ locals ]] ====
+
+
+==== [[ Instructions ]] ====
+
+[0]    CLOSURE :   R[0]      0              ; 
+[1]  SETGLOBAL :   R[0]   K[0]              ; 
+[2]  GETGLOBAL :   R[0]   K[0]              ; move _G["greet"] into R[0]
+[3]      LOADK :   R[1]   K[1]              ; load "Alice" into R[1]
+[4]       CALL :      0      2      1       ; 
+[5]  GETGLOBAL :   R[0]   K[0]              ; move _G["greet"] into R[0]
+[6]      LOADK :   R[1]   K[2]              ; load "Bob" into R[1]
+[7]       CALL :      0      2      1       ; 
+[8]     RETURN :      0      1      0       ; 
+
+==== [[ protos ]] ====
+
+
+===========+ Chunk:  +===========
+
+==== [[ constants ]] ====
+
+[0]: [STRING] print
+[1]: [STRING] Bonjour, 
+[2]: [STRING] !
+
+==== [[ locals ]] ====
+
+R[0]: name
+
+==== [[ Instructions ]] ====
+
+[0]  GETGLOBAL :   R[1]   K[0]              ; move _G["print"] into R[1]
+[1]      LOADK :   R[2]   K[1]              ; load "Bonjour, " into R[2]
+[2]       MOVE :      3      0      0       ; move R[0] into R[3]
+[3]      LOADK :   R[4]   K[2]              ; load "!" into R[4]
+[4]     CONCAT :      2      2      4       ; concat 3 values from R[2] to R[4], store into R[2]
+[5]       CALL :      1      2      1       ; 
+[6]     RETURN :      0      1      0       ; 
+==================================

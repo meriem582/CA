@@ -1,0 +1,47 @@
+
+===========+ HEADER +===========
+VM Version        : 81
+Bytecode Format   : 0
+index             : 209
+Big Endian        : false
+Int Size          : 4
+Size_t Size       : 8
+Instruction Size  : 4
+Lua Number Size   : 8
+Integral Flag     : 0 (F)
+==================================
+
+===========+ Chunk: @test11.lua +===========
+
+==== [[ constants ]] ====
+
+[0]: [STRING] add
+
+==== [[ locals ]] ====
+
+
+==== [[ Instructions ]] ====
+
+[0]    CLOSURE :   R[0]      0              ; 
+[1]  SETGLOBAL :   R[0]   K[0]              ; 
+[2]     RETURN :      0      1      0       ; 
+
+==== [[ protos ]] ====
+
+
+===========+ Chunk:  +===========
+
+==== [[ constants ]] ====
+
+
+==== [[ locals ]] ====
+
+R[0]: a
+R[1]: b
+
+==== [[ Instructions ]] ====
+
+[0]        ADD :  R[2]    R[0]   R[1]       ; add R[1] to R[0], place into R[2]
+[1]     RETURN :      2      2      0       ; 
+[2]     RETURN :      0      1      0       ; 
+==================================

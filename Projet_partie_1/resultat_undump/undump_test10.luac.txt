@@ -1,0 +1,59 @@
+
+===========+ HEADER +===========
+VM Version        : 81
+Bytecode Format   : 0
+index             : 416
+Big Endian        : false
+Int Size          : 4
+Size_t Size       : 8
+Instruction Size  : 4
+Lua Number Size   : 8
+Integral Flag     : 0 (F)
+==================================
+
+===========+ Chunk: @test10.lua +===========
+
+==== [[ constants ]] ====
+
+[0]: [STRING] maTable
+[1]: [STRING] nom
+[2]: [STRING] Jean
+[3]: [STRING] age
+[4]: [NUMBER] 30.
+[5]: [STRING] ville
+[6]: [STRING] Paris
+[7]: [STRING] print
+[8]: [STRING] Nom:
+[9]: [STRING] Âge:
+[10]: [STRING] Ville:
+
+==== [[ locals ]] ====
+
+
+==== [[ Instructions ]] ====
+
+[0]   NEWTABLE :      0      0      0       ; 
+[1]  SETGLOBAL :   R[0]   K[0]              ; 
+[2]  GETGLOBAL :   R[0]   K[0]              ; move _G["maTable"] into R[0]
+[3]   SETTABLE :  R[0]    K[1]   K[2]       ; 
+[4]  GETGLOBAL :   R[0]   K[0]              ; move _G["maTable"] into R[0]
+[5]   SETTABLE :  R[0]    K[3]   K[4]       ; 
+[6]  GETGLOBAL :   R[0]   K[0]              ; move _G["maTable"] into R[0]
+[7]   SETTABLE :  R[0]    K[5]   K[6]       ; 
+[8]  GETGLOBAL :   R[0]   K[7]              ; move _G["print"] into R[0]
+[9]      LOADK :   R[1]   K[8]              ; load "Nom:" into R[1]
+[10]  GETGLOBAL :   R[2]   K[0]              ; move _G["maTable"] into R[2]
+[11]   GETTABLE :   R[2]      2   K[1]       ; 
+[12]       CALL :      0      3      1       ; 
+[13]  GETGLOBAL :   R[0]   K[7]              ; move _G["print"] into R[0]
+[14]      LOADK :   R[1]   K[9]              ; load "Âge:" into R[1]
+[15]  GETGLOBAL :   R[2]   K[0]              ; move _G["maTable"] into R[2]
+[16]   GETTABLE :   R[2]      2   K[3]       ; 
+[17]       CALL :      0      3      1       ; 
+[18]  GETGLOBAL :   R[0]   K[7]              ; move _G["print"] into R[0]
+[19]      LOADK :   R[1]  K[10]              ; load "Ville:" into R[1]
+[20]  GETGLOBAL :   R[2]   K[0]              ; move _G["maTable"] into R[2]
+[21]   GETTABLE :   R[2]      2   K[5]       ; 
+[22]       CALL :      0      3      1       ; 
+[23]     RETURN :      0      1      0       ; 
+==================================

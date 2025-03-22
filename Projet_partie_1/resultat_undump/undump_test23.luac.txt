@@ -1,0 +1,25 @@
+
+===========+ HEADER +===========
+VM Version        : 81
+Bytecode Format   : 0
+index             : 76
+Big Endian        : false
+Int Size          : 4
+Size_t Size       : 8
+Instruction Size  : 4
+Lua Number Size   : 8
+Integral Flag     : 0 (F)
+==================================
+
+===========+ Chunk: @test23.lua +===========
+
+==== [[ constants ]] ====
+
+
+==== [[ locals ]] ====
+
+
+==== [[ Instructions ]] ====
+
+[0]     RETURN :      0      1      0       ; 
+==================================

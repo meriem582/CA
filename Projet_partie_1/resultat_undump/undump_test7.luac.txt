@@ -1,0 +1,42 @@
+
+===========+ HEADER +===========
+VM Version        : 81
+Bytecode Format   : 0
+index             : 265
+Big Endian        : false
+Int Size          : 4
+Size_t Size       : 8
+Instruction Size  : 4
+Lua Number Size   : 8
+Integral Flag     : 0 (F)
+==================================
+
+===========+ Chunk: @test7.lua +===========
+
+==== [[ constants ]] ====
+
+[0]: [STRING] name
+[1]: [STRING] Alice
+[2]: [STRING] age
+[3]: [NUMBER] 25.
+[4]: [STRING] city
+[5]: [STRING] Paris
+[6]: [STRING] print
+
+==== [[ locals ]] ====
+
+R[0]: person
+
+==== [[ Instructions ]] ====
+
+[0]   NEWTABLE :      0      0      3       ; 
+[1]   SETTABLE :  R[0]    K[0]   K[1]       ; 
+[2]   SETTABLE :  R[0]    K[2]   K[3]       ; 
+[3]   SETTABLE :  R[0]    K[4]   K[5]       ; 
+[4]  GETGLOBAL :   R[1]   K[6]              ; move _G["print"] into R[1]
+[5]   GETTABLE :   R[2]      0   K[0]       ; 
+[6]   GETTABLE :   R[3]      0   K[2]       ; 
+[7]   GETTABLE :   R[4]      0   K[4]       ; 
+[8]       CALL :      1      4      1       ; 
+[9]     RETURN :      0      1      0       ; 
+==================================
