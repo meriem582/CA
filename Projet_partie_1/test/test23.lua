@@ -1,2 +1,2 @@
-local a = 2 ^ 3  -- POW
+local a = 2^3  -- POW
 print(a)

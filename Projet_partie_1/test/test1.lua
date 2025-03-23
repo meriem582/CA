@@ -1,6 +1,6 @@
 local a = 42
-c = "Global!"
-local function f(b)
-    print(a)
-end
-f(b)
+ c = "Global!"
+ local function f(b)
+ print(a)
+ end
+    f(1)

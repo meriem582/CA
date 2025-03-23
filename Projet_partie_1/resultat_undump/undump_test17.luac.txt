@@ -25,7 +25,7 @@ R[0]: tbl
 
 [0]   NEWTABLE :      0      0      0       ; 
 [1]  GETGLOBAL :   R[1]   K[0]              ; move _G["print"] into R[1]
-[2]       MOVE :      2      0      0       ; move R[0] into R[2]
+[2]        LEN :      2      0      0       ; len R[0], place into R[2]
 [3]       CALL :      1      2      1       ; 
 [4]     RETURN :      0      1      0       ; 
 ==================================

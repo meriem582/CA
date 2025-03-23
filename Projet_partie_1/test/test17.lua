@@ -1,2 +1,2 @@
 local tbl = {}  -- NEWTABLE
-print(tbl)
+print(#tbl)

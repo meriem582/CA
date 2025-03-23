@@ -1,0 +1,40 @@
+
+===========+ HEADER +===========
+VM Version        : 81
+Bytecode Format   : 0
+index             : 273
+Big Endian        : false
+Int Size          : 4
+Size_t Size       : 8
+Instruction Size  : 4
+Lua Number Size   : 8
+Integral Flag     : 0 (F)
+==================================
+
+===========+ Chunk: @test8.lua +===========
+
+==== [[ constants ]] ====
+
+[0]: [NUMBER] 1.
+[1]: [NUMBER] 10.
+[2]: [STRING] print
+
+==== [[ locals ]] ====
+
+R[0]: (for index)
+R[1]: (for limit)
+R[2]: (for step)
+R[3]: i
+
+==== [[ Instructions ]] ====
+
+[0]      LOADK :   R[0]   K[0]              ; load 1. into R[0]
+[1]      LOADK :   R[1]   K[1]              ; load 10. into R[1]
+[2]      LOADK :   R[2]   K[0]              ; load 1. into R[2]
+[3]    FORPREP :   R[0]      3              ; 
+[4]  GETGLOBAL :   R[4]   K[2]              ; move _G["print"] into R[4]
+[5]       MOVE :      5      3      0       ; move R[3] into R[5]
+[6]       CALL :      4      2      1       ; 
+[7]    FORLOOP :   R[0]     -4              ; 
+[8]     RETURN :      0      1      0       ; 
+==================================

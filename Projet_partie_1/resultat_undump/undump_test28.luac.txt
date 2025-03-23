@@ -1,0 +1,46 @@
+
+===========+ HEADER +===========
+VM Version        : 81
+Bytecode Format   : 0
+index             : 288
+Big Endian        : false
+Int Size          : 4
+Size_t Size       : 8
+Instruction Size  : 4
+Lua Number Size   : 8
+Integral Flag     : 0 (F)
+==================================
+
+===========+ Chunk: @test28.lua +===========
+
+==== [[ constants ]] ====
+
+[0]: [NUMBER] 10.
+[1]: [STRING] print
+[2]: [NUMBER] 2.
+[3]: [STRING] Avant saut
+[4]: [STRING] Après saut
+
+==== [[ locals ]] ====
+
+R[0]: a
+
+==== [[ Instructions ]] ====
+
+[0]      LOADK :   R[0]   K[0]              ; load 10. into R[0]
+[1]  GETGLOBAL :   R[1]   K[1]              ; move _G["print"] into R[1]
+[2]         EQ :  R[1]    R[0]   K[2]       ; if R[R[0]] == R[K[2]] then pc++
+[3]        JMP :   R[0]      1              ; jump to 1
+[4]   LOADBOOL :      2      0      1       ; 
+[5]   LOADBOOL :      2      1      0       ; 
+[6]       CALL :      1      2      1       ; 
+[7]         EQ :  R[0]    R[0]   K[0]       ; if R[R[0]] == R[K[0]] then pc++
+[8]        JMP :   R[0]      3              ; jump to 3
+[9]  GETGLOBAL :   R[1]   K[1]              ; move _G["print"] into R[1]
+[10]      LOADK :   R[2]   K[3]              ; load "Avant saut" into R[2]
+[11]       CALL :      1      2      1       ; 
+[12]  GETGLOBAL :   R[1]   K[1]              ; move _G["print"] into R[1]
+[13]      LOADK :   R[2]   K[4]              ; load "Après saut" into R[2]
+[14]       CALL :      1      2      1       ; 
+[15]     RETURN :      0      1      0       ; 
+==================================

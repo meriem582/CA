@@ -2,7 +2,7 @@
 ===========+ HEADER +===========
 VM Version        : 81
 Bytecode Format   : 0
-index             : 349
+index             : 368
 Big Endian        : false
 Int Size          : 4
 Size_t Size       : 8
@@ -43,7 +43,8 @@ Integral Flag     : 0 (F)
 
 [0]: [STRING] print
 [1]: [STRING] Bonjour, 
-[2]: [STRING] !
+[2]: [STRING] k
+[3]: [STRING] !
 
 ==== [[ locals ]] ====
 
@@ -53,9 +54,10 @@ R[0]: name
 
 [0]  GETGLOBAL :   R[1]   K[0]              ; move _G["print"] into R[1]
 [1]      LOADK :   R[2]   K[1]              ; load "Bonjour, " into R[2]
-[2]       MOVE :      3      0      0       ; move R[0] into R[3]
-[3]      LOADK :   R[4]   K[2]              ; load "!" into R[4]
-[4]     CONCAT :      2      2      4       ; concat 3 values from R[2] to R[4], store into R[2]
-[5]       CALL :      1      2      1       ; 
-[6]     RETURN :      0      1      0       ; 
+[2]      LOADK :   R[3]   K[2]              ; load "k" into R[3]
+[3]       MOVE :      4      0      0       ; move R[0] into R[4]
+[4]      LOADK :   R[5]   K[3]              ; load "!" into R[5]
+[5]     CONCAT :      2      2      5       ; concat 4 values from R[2] to R[5], store into R[2]
+[6]       CALL :      1      2      1       ; 
+[7]     RETURN :      0      1      0       ; 
 ==================================

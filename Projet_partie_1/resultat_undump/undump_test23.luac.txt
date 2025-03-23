@@ -2,7 +2,7 @@
 ===========+ HEADER +===========
 VM Version        : 81
 Bytecode Format   : 0
-index             : 76
+index             : 150
 Big Endian        : false
 Int Size          : 4
 Size_t Size       : 8
@@ -15,11 +15,18 @@ Integral Flag     : 0 (F)
 
 ==== [[ constants ]] ====
 
+[0]: [NUMBER] 8.
+[1]: [STRING] print
 
 ==== [[ locals ]] ====
 
+R[0]: a
 
 ==== [[ Instructions ]] ====
 
-[0]     RETURN :      0      1      0       ; 
+[0]      LOADK :   R[0]   K[0]              ; load 8. into R[0]
+[1]  GETGLOBAL :   R[1]   K[1]              ; move _G["print"] into R[1]
+[2]       MOVE :      2      0      0       ; move R[0] into R[2]
+[3]       CALL :      1      2      1       ; 
+[4]     RETURN :      0      1      0       ; 
 ==================================

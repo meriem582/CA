@@ -1,0 +1,35 @@
+
+===========+ HEADER +===========
+VM Version        : 81
+Bytecode Format   : 0
+index             : 188
+Big Endian        : false
+Int Size          : 4
+Size_t Size       : 8
+Instruction Size  : 4
+Lua Number Size   : 8
+Integral Flag     : 0 (F)
+==================================
+
+===========+ Chunk: @test27.lua +===========
+
+==== [[ constants ]] ====
+
+[0]: [STRING] Hello
+[1]: [STRING]  World
+[2]: [STRING] print
+
+==== [[ locals ]] ====
+
+R[0]: a
+
+==== [[ Instructions ]] ====
+
+[0]      LOADK :   R[0]   K[0]              ; load "Hello" into R[0]
+[1]      LOADK :   R[1]   K[1]              ; load " World" into R[1]
+[2]     CONCAT :      0      0      1       ; concat 2 values from R[0] to R[1], store into R[0]
+[3]  GETGLOBAL :   R[1]   K[2]              ; move _G["print"] into R[1]
+[4]       MOVE :      2      0      0       ; move R[0] into R[2]
+[5]       CALL :      1      2      1       ; 
+[6]     RETURN :      0      1      0       ; 
+==================================
