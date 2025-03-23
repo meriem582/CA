@@ -35,7 +35,7 @@ Avant d’exécuter les programmes, assurez-vous d’avoir installé :
    ```
 3. Pour traiter tous les fichiers .luac dans test/ 
    ```sh
-   make all
+   make run
    ```
 4. Pour traiter un seul fichier spécifique :
    ```sh

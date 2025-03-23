@@ -594,7 +594,7 @@ let rec decode_chunk lua_undump =
   
     chunk
   
-let decode_bytecode lua_undump bytecode =
+let decode_bytecode bytecode =
   let lua_undump = create_lua_undump bytecode in
 
   (* Extraction des informations du bytecode *)
@@ -633,7 +633,7 @@ let print_lua_undump lua_undump =
   Buffer.contents buffer  (* Retourne le contenu sous forme de string *)
   
 (* Fonction pour décoder un bytecode brut *)
-let decode_rawbytecode lua_undump rawbytecode =
+let decode_rawbytecode  rawbytecode =
   (* Vérification de la taille avant de manipuler la chaîne *)
   if String.length rawbytecode < 4 then
     failwith "Raw bytecode too short"
@@ -641,15 +641,14 @@ let decode_rawbytecode lua_undump rawbytecode =
     raise LuaBytecodeExpected
   else
     let bytecode = Bytes.of_string rawbytecode in
-    decode_bytecode lua_undump bytecode
+    decode_bytecode bytecode
 (* Fonction pour charger un fichier bytecode Lua *)
 
 let load_file luaCFile =
   let ic = open_in_bin luaCFile in
   let bytecode = really_input_string ic (in_channel_length ic) in
   close_in ic;
-  let lua_undump = create_lua_undump in
-  decode_rawbytecode lua_undump bytecode
+  decode_rawbytecode  bytecode
 
 (*LuaDump*)
 let _encode_instr instr =
@@ -1832,7 +1831,7 @@ let () =
     let vm = init_vm in
     Printf.printf "Résultat :*********************************\n";
     run_vm vm lua_undump.root_chunk;
-    Printf.printf "*******************************************\n";
+    Printf.printf "\n*******************************************\n";
     Printf.printf "Execution terminée\n";
 
   ) files_to_process;
