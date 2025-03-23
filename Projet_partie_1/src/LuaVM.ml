@@ -9,13 +9,6 @@ type instruction_type =
   | ABx
   | AsBx
 
-(* Fonction pour convertir un entier en instruction *)
-let int_to_instruction = function
-  | 0 -> ABC
-  | 1 -> ABx
-  | 2 -> AsBx
-  | _ -> invalid_arg "Instruction inconnue"
-
 (* Définition du type énuméré opcode *)
 type opcode =
   | MOVE | LOADK | LOADBOOL | LOADNIL | GETUPVAL | GETGLOBAL | GETTABLE
@@ -24,103 +17,12 @@ type opcode =
   | TEST | TESTSET | CALL | TAILCALL | RETURN | FORLOOP | FORPREP
   | TFORLOOP | SETLIST | CLOSE | CLOSURE | VARARG
 
-(* Fonction pour convertir un entier en opcode *)
-let int_to_opcode = function
-  | 0  -> MOVE
-  | 1  -> LOADK
-  | 2  -> LOADBOOL
-  | 3  -> LOADNIL
-  | 4  -> GETUPVAL
-  | 5  -> GETGLOBAL
-  | 6  -> GETTABLE
-  | 7  -> SETGLOBAL
-  | 8  -> SETUPVAL
-  | 9  -> SETTABLE
-  | 10 -> NEWTABLE
-  | 11 -> SELF
-  | 12 -> ADD
-  | 13 -> SUB
-  | 14 -> MUL
-  | 15 -> DIV
-  | 16 -> MOD
-  | 17 -> POW
-  | 18 -> UNM
-  | 19 -> NOT
-  | 20 -> LEN
-  | 21 -> CONCAT
-  | 22 -> JMP
-  | 23 -> EQ
-  | 24 -> LT
-  | 25 -> LE
-  | 26 -> TEST
-  | 27 -> TESTSET
-  | 28 -> CALL
-  | 29 -> TAILCALL
-  | 30 -> RETURN
-  | 31 -> FORLOOP
-  | 32 -> FORPREP
-  | 33 -> TFORLOOP
-  | 34 -> SETLIST
-  | 35 -> CLOSE
-  | 36 -> CLOSURE
-  | 37 -> VARARG
-  | _  -> invalid_arg "Opcode inconnu"
-
-(* Fonction pour afficher un opcode sous forme de chaîne *)
-let opcode_to_string = function
-  | MOVE      -> "MOVE"
-  | LOADK     -> "LOADK"
-  | LOADBOOL  -> "LOADBOOL"
-  | LOADNIL   -> "LOADNIL"
-  | GETUPVAL  -> "GETUPVAL"
-  | GETGLOBAL -> "GETGLOBAL"
-  | GETTABLE  -> "GETTABLE"
-  | SETGLOBAL -> "SETGLOBAL"
-  | SETUPVAL  -> "SETUPVAL"
-  | SETTABLE  -> "SETTABLE"
-  | NEWTABLE  -> "NEWTABLE"
-  | SELF      -> "SELF"
-  | ADD       -> "ADD"
-  | SUB       -> "SUB"
-  | MUL       -> "MUL"
-  | DIV       -> "DIV"
-  | MOD       -> "MOD"
-  | POW       -> "POW"
-  | UNM       -> "UNM"
-  | NOT       -> "NOT"
-  | LEN       -> "LEN"
-  | CONCAT    -> "CONCAT"
-  | JMP       -> "JMP"
-  | EQ        -> "EQ"
-  | LT        -> "LT"
-  | LE        -> "LE"
-  | TEST      -> "TEST"
-  | TESTSET   -> "TESTSET"
-  | CALL      -> "CALL"
-  | TAILCALL  -> "TAILCALL"
-  | RETURN    -> "RETURN"
-  | FORLOOP   -> "FORLOOP"
-  | FORPREP   -> "FORPREP"
-  | TFORLOOP  -> "TFORLOOP"
-  | SETLIST   -> "SETLIST"
-  | CLOSE     -> "CLOSE"
-  | CLOSURE   -> "CLOSURE"
-  | VARARG    -> "VARARG"
-
 (* Définition du type énuméré ConstType *)
 type const_type =
   | NIL
   | BOOL
   | NUMBER
   | STRING
-
-(* Fonction pour convertir un entier en ConstType *)
-let int_to_const_type = function
-  | 0 -> NIL
-  | 1 -> BOOL
-  | 3 -> NUMBER
-  | 4 -> STRING
-  | _ -> invalid_arg "ConstType inconnu"
 
 (* Fonction pour convertir un ConstType en chaîne de caractères *)
 let const_type_to_string = function
@@ -213,12 +115,6 @@ let print_instruction instr =
 type constant ={
   type_const : const_type;
   data : string;
-}
-
-(* Constructeur pour créer une nouvelle constante *)
-let create_constant t data = {
-  type_const = t;
-  data = data;
 }
 
 (* Fonction pour afficher une constante *)
@@ -469,7 +365,7 @@ let _get_uint32 (lua_undump : lua_undump) : int =
   let b3 = Char.code (Bytes.get lua_undump.bytecode (lua_undump.index + 3)) in
   
   lua_undump.index <- lua_undump.index + 4;
-  (*On récupere selon ordre de bytecode "big_endian" or "little endian"*)
+
   if lua_undump.big_endian then
     (b0 lsl 24) lor (b1 lsl 16) lor (b2 lsl 8) lor b3
   else
@@ -518,11 +414,10 @@ let _get_size_t lua_undump : int =
 (* Fonction pour extraire une chaîne de caractères d'un bloc donné *)
 let _get_string lua_undump size : string =
   if size <= 0 then
-    ""  (* Retourne une chaîne vide si la taille est 0 ou négative *)
+    "" 
   else
     let block = _loadBlock lua_undump size in
     let str = Bytes.to_string block in
-    (* On supprime le dernier caractère (null terminator) si la chaîne n'est pas vide *)
     if String.length str > 0 then
       String.sub str 0 (String.length str - 1)
     else
@@ -568,9 +463,7 @@ let rec decode_chunk lua_undump =
       let proto = decode_chunk lua_undump in
       append_proto chunk proto
     done;
-  
-    (* Consommation des informations de débogage *)
-  
+    
     (* Numéros de ligne *)
     let num_lines = _get_uint lua_undump in
     chunk.lineNums <- List.init num_lines (fun _ -> _get_uint lua_undump);
