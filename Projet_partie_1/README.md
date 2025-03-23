@@ -68,8 +68,5 @@ Execution terminée
 - **Exécution avec la VM** : Exécution du bytecode grâce à une machine virtuelle implémentée en OCaml
 
 ## 👨‍💻 Auteur
+BENAISSA Meriem
 Projet réalisé dans le cadre du cours de **Compilation Avancée**.
-
-## 📜 Licence
-Ce projet est sous licence MIT.
-
