@@ -1783,41 +1783,58 @@ let init_vm =
       vm
 
 let () =
-  let test_dir = "./test" in  (* Chemin vers le répertoire contenant les fichiers .luac *)
+  let test_dir = "./test" in  (* Répertoire contenant les fichiers .luac *)
   let output_dir = "./resultat_dump" in  (* Répertoire de destination *)
-  let output_dire_undump = "./resultat_undump" in  (* Répertoire de destination *)
+  let output_dir_undump = "./resultat_undump" in  (* Répertoire de destination *)
 
   (* Vérifier si le répertoire de sortie existe, sinon le créer *)
   if not (Sys.file_exists output_dir) then Sys.mkdir output_dir 0o755;
-  if not (Sys.file_exists output_dire_undump) then Sys.mkdir output_dire_undump 0o755;
+  if not (Sys.file_exists output_dir_undump) then Sys.mkdir output_dir_undump 0o755;
 
-  (* Vérifier si le répertoire test existe bien *)
-  if Sys.file_exists test_dir && Sys.is_directory test_dir then
-    let files = Sys.readdir test_dir in
-    Array.iter (fun file ->
-      if Filename.check_suffix file ".luac" then
-        let input_file = Filename.concat test_dir file in
-        let lua_undump = load_file input_file in
-        let output_file_undump = Filename.concat output_dire_undump ("undump_" ^ file ^ ".txt") in
-        Printf.printf "======================Traitement du fichier %s=======================\n" file;
-        save_to_file_undump_result output_file_undump (print_lua_undump lua_undump);
-        
-        (* Création de l'objet lua_dump *)
-        let lua_dump = create_dump lua_undump.root_chunk in
-        
-        (* Génération du bytecode *)
-        let bytecode = dump lua_dump in
-        
-        (* Définition du chemin du fichier de sortie *)
-        let output_file = Filename.concat output_dir ("processed_" ^ file) in
-        save_to_file output_file bytecode;  
-        let vm=init_vm in
-        Printf.printf "Résultat :*********************************\n";
-        run_vm vm lua_undump.root_chunk;
-        Printf.printf "*******************************************\n";
-        Printf.printf "Execution terminée\n";
-  
-    ) files;
+  (* Récupérer les arguments passés en ligne de commande *)
+  let files_to_process =
+    if Array.length Sys.argv > 1 then
+      (* L'utilisateur a fourni un fichier spécifique *)
+      let file = Sys.argv.(1) in
+      if Filename.check_suffix file ".luac" then [ file ]
+      else (Printf.printf "Erreur : %s n'est pas un fichier .luac\n" file; exit 1)
+    else
+      (* Aucun argument, traiter tous les fichiers .luac du dossier test *)
+      if Sys.file_exists test_dir && Sys.is_directory test_dir then
+        Array.fold_left (fun acc file ->
+          if Filename.check_suffix file ".luac" then
+            (Filename.concat test_dir file) :: acc
+          else acc
+        ) [] (Sys.readdir test_dir)
+      else (Printf.printf "Erreur : Le répertoire %s n'existe pas ou n'est pas un dossier.\n" test_dir; exit 1)
+  in
+
+  (* Traitement des fichiers *)
+  List.iter (fun input_file ->
+    let file_name = Filename.basename input_file in
+    Printf.printf "======================Traitement du fichier %s=======================\n" file_name;
+
+    let lua_undump = load_file input_file in
+    let output_file_undump = Filename.concat output_dir_undump ("undump_" ^ file_name ^ ".txt") in
+    save_to_file_undump_result output_file_undump (print_lua_undump lua_undump);
+
+    (* Création de l'objet lua_dump *)
+    let lua_dump = create_dump lua_undump.root_chunk in
+
+    (* Génération du bytecode *)
+    let bytecode = dump lua_dump in
+
+    (* Définition du chemin du fichier de sortie *)
+    let output_file = Filename.concat output_dir ("processed_" ^ file_name) in
+    save_to_file output_file bytecode;
+
+    (* Exécution sur la VM *)
+    let vm = init_vm in
+    Printf.printf "Résultat :*********************************\n";
+    run_vm vm lua_undump.root_chunk;
+    Printf.printf "*******************************************\n";
+    Printf.printf "Execution terminée\n";
+
+  ) files_to_process;
+
   Printf.printf "=============================================================================\n"
-  else
-    Printf.printf "Erreur : Le répertoire %s n'existe pas ou n'est pas un dossier.\n" test_dir

@@ -33,19 +33,23 @@ Avant d’exécuter les programmes, assurez-vous d’avoir installé :
    ```sh
    cd Projet_partie_1
    ```
-3. Compiler le projet :
+3. Pour traiter tous les fichiers .luac dans test/ 
    ```sh
    make all
    ```
+4. Pour traiter un seul fichier spécifique :
+   ```sh
+   make run-file FILE=./test/mon_fichier.luac
+   ```
 
-4. Nettoyer les fichiers générés :
+5. Nettoyer les fichiers générés :
    ```sh
    make clean
    ```
 
 ### ▶️ Exécution
 Après `make all`, tous les fichiers `.luac` situés dans `test/` seront traités.
-Le format de sortie affiché est :
+Le format de sortie affiché est par exemple:
 ```sh
 ======================Traitement du fichier test7.luac=======================
 Undump result est écrit dans : ./resultat_undump/undump_test7.luac.txt
