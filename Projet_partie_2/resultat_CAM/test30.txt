@@ -1,0 +1,1 @@
+Push; Quote 0; Cons; Push; Cur (Push; Push; Push; Op ==; Swap; Cons; App; Swap; Quote 0; Cons; App; Branch (Quote 0, Push; Car; Swap; Push; Push; Op -; Swap; Cons; App; Swap; Quote 1; Cons; App; Cons; App)); Swap; Rplac; Push; Swap; Quote 5; Cons; App

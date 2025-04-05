@@ -1,0 +1,1 @@
+rm -f parser.ml parser.mli lexer.ml *.cmo *.cmi mini_ml parser.conflicts main

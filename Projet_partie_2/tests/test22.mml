@@ -1,0 +1,1 @@
+let swap = fun (x, y) -> (y, x) in swap (3, 4)

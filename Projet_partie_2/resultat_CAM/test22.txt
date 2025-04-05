@@ -1,0 +1,1 @@
+Push; Cur (Push; Car; Swap; Cons); Cons; Push; Swap; Push; Quote 3; Swap; Quote 4; Cons; Cons; App

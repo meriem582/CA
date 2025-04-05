@@ -1,0 +1,1 @@
+Push; Quote 3; Cons; Push; Swap; Push; Push; Op +; Swap; Cons; App; Swap; Quote 1; Cons; App; Cons

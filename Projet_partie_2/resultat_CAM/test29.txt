@@ -1,0 +1,1 @@
+Push; Cur (Push; Push; Push; Op >; Swap; Cons; App; Swap; Quote 0; Cons; App; Branch (Quote true, Quote false)); Cons; Push; Swap; Quote -5; Cons; App

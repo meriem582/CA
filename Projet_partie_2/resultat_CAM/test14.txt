@@ -1,0 +1,1 @@
+Push; Push; Push; Op <; Swap; Quote 4; Cons; App; Swap; Quote 5; Cons; App; Branch (Quote true, Quote false)
