@@ -1,1 +1,1 @@
-Push; Push; Op +; Swap; Quote 3; Cons; App; Swap; Quote 5; Cons; App
+[Push; Quote (Int 3); Swap; Quote (Int 5); Cons; Op Add]

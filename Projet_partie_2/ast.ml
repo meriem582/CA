@@ -64,10 +64,10 @@ and string_of_pat = function
 
 let rec string_of_com = function
   | Quote v -> "Quote " ^ (match v with 
-      | Int n -> string_of_int n 
-      | Bool b -> string_of_bool b 
+      | Int n -> "(Int " ^ string_of_int n ^ ")"
+      | Bool b ->  "( Bool " ^ string_of_bool b  ^ ")" 
       | NullValue -> "null")
-  | Op op -> "Op " ^ (match op with Add -> "+" | Sub -> "-" | Mult -> "*" | Div -> "/" | Lt -> "<" | Gt -> ">" | Eq -> "=" | Leq -> "<=" | Geq -> ">=" | EqEq -> "==")
+  | Op op -> "Op " ^ (match op with Add -> "Add" | Sub -> "Sub" | Mult -> "Mult" | Div -> "Div" | Lt -> "Lt" | Gt -> "Gt" | Eq -> "Eq" | Leq -> "Leq" | Geq -> "Geq" | EqEq -> "EqEq")
   | Car -> "Car"
   | Cdr -> "Cdr"
   | Cons -> "Cons"

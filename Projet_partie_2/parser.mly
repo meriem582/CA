@@ -45,16 +45,16 @@ expression :
   | IF expression THEN expression ELSE expression   { If($2,$4,$6) }
   | expression expression                           { Apply($1,$2) }
   | LPAREN expression COMMA expression RPAREN       { Mlpair($2,$4) }
-  | expression PLUS expression                      { Apply(Apply(Ident "+", $1), $3) }
-  | expression MINUS expression                     { Apply(Apply(Ident "-", $1), $3) }
-  | expression TIMES expression                     { Apply(Apply(Ident "*", $1), $3) }
-  | expression DIV expression                       { Apply(Apply(Ident "/", $1), $3) }
-  | expression LT expression                        { Apply(Apply(Ident "<", $1), $3) }
-  | expression GT expression                        { Apply(Apply(Ident ">", $1), $3) }
-  | expression LEQ expression                       { Apply(Apply(Ident "<=", $1), $3) }
-  | expression GEQ expression                       { Apply(Apply(Ident ">=", $1), $3) }
-  | expression EQEQ expression                      { Apply(Apply(Ident "==", $1), $3) }
-  | MINUS expression                     { Apply(Ident "-", $2) }  
+  | expression PLUS expression                      { Apply((Ident "+"), Mlpair ($1,$3)) }
+  | expression MINUS expression                     { Apply((Ident "-"), Mlpair ($1,$3)) }
+  | expression TIMES expression                     { Apply((Ident "*"), Mlpair ($1,$3)) }
+  | expression DIV expression                       { Apply((Ident "/"), Mlpair ($1,$3)) }
+  | expression LT expression                        { Apply((Ident "<"), Mlpair ($1,$3)) }
+  | expression GT expression                        { Apply((Ident ">"), Mlpair ($1,$3)) }
+  | expression LEQ expression                       { Apply((Ident "<="), Mlpair ($1,$3)) }
+  | expression GEQ expression                       { Apply((Ident ">="), Mlpair ($1,$3)) }
+  | expression EQEQ expression                      { Apply((Ident "=="), Mlpair ($1,$3)) }
+  | MINUS expression                                { Apply(Ident "-", $2) }  
 ;
 
 pat:

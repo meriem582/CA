@@ -1,1 +1,1 @@
-Push; Cur (Push; Push; Op *; Swap; Quote 3; Cons; App; Swap; Cons; App); Cons; Push; Swap; Quote 7; Cons; App
+[Push; Cur (Push; Quote (Int 3); Swap; Cdr; Cons; Op Mult); Cons; Push; Cdr; Swap; Quote (Int 7); Cons; App]

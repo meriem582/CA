@@ -22,7 +22,7 @@ let compile_string_to_string s =
   try
     let ast = prog token lexbuf in
     let compiled_code = compile [] ast in
-    String.concat "; " (List.map string_of_com compiled_code) ^ "\n"
+    "[" ^ String.concat "; " (List.map string_of_com compiled_code) ^ "]" ^ "\n"
   with
   | Failure msg -> "Erreur: " ^ msg ^ "\n"
   | Parser.Error -> "Erreur de syntaxe !\n"
