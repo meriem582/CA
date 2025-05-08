@@ -1,1 +1,0 @@
-[Push; Quote (Int 10); Swap; Quote (Int 4); Cons; Op Sub]

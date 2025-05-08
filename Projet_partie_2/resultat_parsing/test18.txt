@@ -1,1 +1,0 @@
-(let pair = (10, 20) in (snd pair))

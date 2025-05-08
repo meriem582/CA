@@ -1,1 +1,0 @@
-[Push; Cur (Push; Cdr; Swap; Cdr; Cons; Op Mult); Swap; Quote (Int 5); Cons; App]

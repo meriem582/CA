@@ -1,1 +1,0 @@
-[Push; Quote (Int 5); Cons; Push; Push; Cdr; Swap; Quote (Int 3); Cons; Op Gt; Branch (Push; Cdr; Swap; Quote (Int 2); Cons; Op Mult, Push; Cdr; Swap; Quote (Int 2); Cons; Op Div)]

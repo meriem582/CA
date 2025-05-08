@@ -19,7 +19,8 @@ rule token = parse
   | "if"               { IF }
   | "then"             { THEN }
   | "else"             { ELSE }
-  
+  | "fst"               { FST }
+  | "snd"               { SND }
   | "="                { EQ }
   | '+'                { PLUS }
   | '-'                { MINUS }
@@ -29,7 +30,6 @@ rule token = parse
   | ">"                { GT }
   | "<="               { LEQ }
   | ">="               { GEQ }
-  | "=="               { EQEQ }
 
   
   | ident as x         { IDENT(x) }

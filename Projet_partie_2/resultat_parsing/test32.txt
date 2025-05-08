@@ -1,1 +1,0 @@
-(let neg = (fun x -> (- x)) in (neg -10))

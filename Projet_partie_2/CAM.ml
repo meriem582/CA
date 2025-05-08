@@ -1,4 +1,88 @@
-open Ast
+(* AST Mini_ml *)
+type ident = string
+
+type pat =
+  | Pairpat of pat * pat
+  | Identpat of ident
+  | Nullpat
+
+type expr =
+  | Ident of ident
+  | Number of int
+  | Bool of bool
+  | If of expr * expr * expr
+  | Apply of expr * expr
+  | MLpair of expr * expr
+  | Lambda of pat * expr
+  | MLin of dec * expr
+  | Op of operatorML
+  | MLfst 
+  | MLsnd
+
+and operatorML =
+  | MLadd 
+  | MLsub
+  | MLmult
+  | MLdiv
+  | MLlt
+  | MLgt
+  | MLeq
+  | MLleq
+  | MLgeq
+
+and dec =
+  | Let of pat * expr
+  | Letrec of pat * expr
+
+(* AST CAM *)
+type com =
+  | Quote of value
+  | Opc of operator
+  | Cdr
+  | Car
+  | Cons
+  | Push
+  | Swap
+  | Return
+  | App
+  | Rplac
+  | Cur of coms
+  | Branch of coms * coms
+
+and operator = Add | Sub | Mult | Div | Lt | Gt | Eq | Leq | Geq  
+
+
+and value =
+  | Int of int
+  | Bool of bool
+  | Nullvalue
+  | Pair of value * value
+  | Closure of coms * value
+
+and coms = com list
+
+
+type stackelem = Val of value | Code of coms
+type stack = stackelem list
+type config = value ref * coms * stack
+(* VM CAM *)
+let rec exec : config -> config = function
+  | ({ contents = Pair(x, y) }, Cdr :: c, d) -> exec (ref x, c, d)
+  | ({ contents = Pair(x, y) }, Car :: c, d) -> exec (ref y, c, d)
+  | (x, Cons :: c, Val y :: d) -> exec (ref (Pair (y, !x)), c, d)
+  | (x, Rplac :: c, Val (Pair (y, z) as u) :: d) -> ref z := !x; exec (ref u, c, d)
+  | ({ contents = x }, Push :: c, d) -> exec (ref x, c, Val x :: d)
+  | ({ contents = x }, Swap :: c, Val y :: d) -> exec (ref y, c, Val x :: d)
+  | (t, Quote v :: c, d) -> exec (ref v, c, d)
+  | ({ contents = Pair (Closure (x, y), z) }, App :: c, d) -> exec (ref (Pair (y, z)), x, Code c :: d)
+  | ({ contents = Bool b }, Branch (c1, c2) :: c, Val x :: d) -> exec (ref x, (if b then c1 else c2), Code c :: d)
+  | ({ contents = Pair (Int m, Int n) }, Opc Add :: c, d) -> exec (ref (Int (m + n)), c, d)
+  | ({ contents = Pair (Int m, Int n) }, Opc Eq :: c, d) -> exec (ref (Bool (m = n)), c, d)
+  | ({ contents = x }, Cur c1 :: c, d) -> exec (ref (Closure (c1, x)), c, d)
+  | ({ contents = x }, Return :: c, Code c' :: d) -> exec (ref x, c', d)
+  | config -> config
+
+let exec_code cs = exec (ref Nullvalue, cs, [])
 
 (* Compilation Mini-ML -> CAM *)
 
@@ -34,17 +118,9 @@ let rec compile pat = function
   | _ -> failwith "compile"
 
 and is_constant = function
-  | Op MLadd 
-  | Op MLsub
-  | Op MLmult
-  | Op MLdiv
-  | Op MLlt
-  | Op MLgt
-  | Op MLeq
-  | Op MLleq
+  | Op MLadd | Op MLeq
   | Op MLgeq
-  | MLfst 
-  | MLsnd -> true
+   | MLfst | MLsnd -> true
   | _ -> false
 
 and trans_constant = function
@@ -93,7 +169,8 @@ let run e =
   in
   let code_str = "[" ^ String.concat "; " (List.map string_of_com cam_code) ^ "]" in
   print_endline code_str;
-  cam_code
+  print_endline "=== Résultat ===";
+  exec_code cam_code
 
 (* Affichage *)
 let rec string_of_value = function
@@ -103,4 +180,16 @@ let rec string_of_value = function
   | Pair (v1, v2) -> "(" ^ string_of_value v1 ^ ", " ^ string_of_value v2 ^ ")"
   | Closure _ -> "<closure>"
 
-  
+(* Exemple Mini-ML à tester *)
+let example =
+  MLin(Let(Identpat "x", Number 5),
+       MLin(Let(Identpat "z",
+                Lambda(Identpat "y",
+                       Apply(Op MLadd, MLpair(Ident "y", Ident "x")))),
+            MLin(Let(Identpat "x", Number 1),
+                 MLin(Let(Identpat "r", Apply(Ident "z", Ident "x")),
+                      Apply(Op MLadd, MLpair(Ident "r", Ident "r"))))))
+
+let () =
+  let (v, _, _) = run example in
+  Printf.printf "Résultat final : %s\n" (string_of_value !v)

@@ -18,10 +18,13 @@ ocamlc -c lexer.ml
 echo "🔄 Compilation du transformateur (compilateur Mini-ML -> CAM)..."
 ocamlc -c transformateur.ml
 
+echo "🔄 Compilation de la VM ..."
+ocamlc -c vm.ml
+
 echo "🔄 Compilation du main"
 ocamlc -I +unix -c main.ml
 
 echo "🔄 Liaison finale de l'exécutable..."
-ocamlc -I +unix -o mini_ml unix.cma ast.cmo lexer.cmo parser.cmo transformateur.cmo main.cmo
+ocamlc -I +unix -o mini_ml unix.cma ast.cmo lexer.cmo parser.cmo transformateur.cmo vm.cmo main.cmo
 
 echo "✅ Compilation terminée avec succès !"

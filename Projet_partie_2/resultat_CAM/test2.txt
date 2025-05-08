@@ -1,1 +1,0 @@
-[Push; Quote ( Bool true); Branch (Quote (Int 1), Quote (Int 0))]

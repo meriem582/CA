@@ -1,1 +1,0 @@
-(let triple = (fun x -> (* (3, x))) in (triple 7))

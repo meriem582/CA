@@ -1,1 +1,0 @@
-[Push; Push; Quote (Int 4); Swap; Quote (Int 5); Cons; Op Lt; Branch (Quote ( Bool true), Quote ( Bool false))]

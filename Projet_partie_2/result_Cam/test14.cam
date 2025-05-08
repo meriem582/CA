@@ -1,0 +1,1 @@
+[Push; Push; Quote 4; Swap; Quote 5; Cons; Lt; Branch [Quote true; Return] [Quote false; Return]]

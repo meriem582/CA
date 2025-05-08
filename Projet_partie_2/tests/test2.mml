@@ -1,1 +1,5 @@
-if true then 1 else 0
+let x = 5 in
+    let z y = y + x in
+    let x = 1 in
+    let r = z x in
+    r + r

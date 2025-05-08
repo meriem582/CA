@@ -1,1 +1,0 @@
-[Push; Cur (Push; Push; Cdr; Swap; Quote (Int 0); Cons; Op Gt; Branch (Quote ( Bool true), Quote ( Bool false))); Cons; Push; Cdr; Swap; Quote (Int -5); Cons; App]
