@@ -1,0 +1,1 @@
+[Push; Cur [Push; Cdr; Cdr; Swap; Cdr; Car; Cons]; Cons; Push; Cdr; Swap; Push; Quote 3; Swap; Quote 4; Cons; Cons; App]

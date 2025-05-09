@@ -1,0 +1,1 @@
+[Push; Cur [Push; Push; Cdr; Swap; Quote 0; Cons; Gt; Branch [Quote true] [Quote false]]; Cons; Push; Cdr; Swap; Quote -5; Cons; App]

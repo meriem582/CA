@@ -2,8 +2,8 @@ open Ast
 
 
 let rec exec : config -> config = function
-  | ({ contents = Pair(x, y) }, Cdr :: c, d) -> exec (ref x, c, d)
-  | ({ contents = Pair(x, y) }, Car :: c, d) -> exec (ref y, c, d)
+  | ({ contents = Pair(x, y) }, Car :: c, d) -> exec (ref x, c, d)
+  | ({ contents = Pair(x, y) }, Cdr :: c, d) -> exec (ref y, c, d)
   | (x, Cons :: c, Val y :: d) -> exec (ref (Pair (y, !x)), c, d)
   | (x, Rplac :: c, Val (Pair (y, z) as u) :: d) -> ref z := !x; exec (ref u, c, d)
   | ({ contents = x }, Push :: c, d) -> exec (ref x, c, Val x :: d)
@@ -18,10 +18,11 @@ let rec exec : config -> config = function
   | ({ contents = Pair (Int m, Int n) }, Opc Lt :: c, d) -> exec (ref (Bool (m < n)), c, d)
   | ({ contents = Pair (Int m, Int n) }, Opc Gt :: c, d) -> exec (ref (Bool (m > n)), c, d)
   | ({ contents = Pair (Int m, Int n) }, Opc Eq :: c, d) -> exec (ref (Bool (m = n)), c, d)
+  | ({ contents = Pair (Int m, Int n) }, Opc Eqeq :: c, d) -> exec (ref (Bool (m == n)), c, d)
   | ({ contents = Pair (Int m, Int n) }, Opc Leq :: c, d) -> exec (ref (Bool (m <= n)), c, d)
   | ({ contents = Pair (Int m, Int n) }, Opc Geq :: c, d) -> exec (ref (Bool (m >= n)), c, d)
   | ({ contents = x }, Cur c1 :: c, d) -> exec (ref (Closure (c1, x)), c, d)
-  | ({ contents = x }, Return :: c, Code c' :: d) -> exec (ref x, c', d)
+  | ({ contents = x }, c, Code c' :: d) -> exec (ref x, c', d)
   | config -> config
 
 let exec_code cs = exec (ref Nullvalue, cs, [])

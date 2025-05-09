@@ -19,7 +19,7 @@ type expr =
   | MLfst 
   | MLsnd
 
-and operatorML = MLadd| MLsub| MLmult| MLdiv| MLlt| MLgt| MLeq| MLleq| MLgeq
+and operatorML = MLadd| MLsub| MLmult| MLdiv| MLlt| MLgt| MLeq| MLleq| MLgeq | MLeqeq
 
 and dec =
   | Let of pat * expr
@@ -34,13 +34,12 @@ type com =
   | Cons
   | Push
   | Swap
-  | Return
   | App
   | Rplac
   | Cur of coms
   | Branch of coms * coms
 
-and operator = Add | Sub | Mult | Div | Lt | Gt | Eq | Leq | Geq  
+and operator = Add | Sub | Mult | Div | Lt | Gt | Eq | Leq | Geq | Eqeq
 
 
 and value =

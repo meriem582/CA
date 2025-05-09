@@ -28,6 +28,7 @@ let rec string_of_com = function
     | Quote _ -> "Quote <complex>"
     | Opc Add -> "Add"
     | Opc Eq -> "Eq"
+    | Opc Eqeq -> "Eqeq"
     | Opc Sub -> "Sub"
     | Opc Mult -> "Mult"
     | Opc Div -> "Div"
@@ -41,7 +42,6 @@ let rec string_of_com = function
     | Rplac -> "Rplac"
     | Push -> "Push"
     | Swap -> "Swap"
-    | Return -> "Return"
     | App -> "App"
     | Cur cs -> "Cur [" ^ (String.concat "; " (List.map string_of_com cs)) ^ "]"
     | Branch (c1, c2) ->

@@ -2,7 +2,7 @@
 open Ast
 %}
  
-%token LET IN IF THEN ELSE FUN EQ FST SND
+%token LET IN IF THEN ELSE FUN EQ FST SND EQEQ
 %token LT GT LEQ GEQ
 
 
@@ -39,7 +39,7 @@ expression :
   | INT                                             { Number($1) }
   | FALSE                                           { Bool false }
   | TRUE                                            { Bool true }
-  | FUN pat EQ expression                           { Lambda($2,$4) }
+  | FUN pat RIGHT_ARROW expression                  { Lambda($2,$4) }
   | LET pat EQ expression IN expression             { MLin (Let ($2, $4), $6) }
   | LET IDENT pat EQ expression IN expression       { MLin (Let (Identpat $2, Lambda ($3, $5)), $7) }
   | LET REC pat EQ expression IN expression         { MLin (Letrec ($3, $5), $7) }
@@ -47,23 +47,24 @@ expression :
   | IF expression THEN expression ELSE expression   { If($2,$4,$6) }
   | expression expression                           { Apply($1,$2) }
   | LPAREN expression COMMA expression RPAREN       { MLpair($2,$4) }
-  | expression PLUS expression              { Apply (Op MLadd, MLpair($1, $3)) }
-  | expression MINUS expression             { Apply (Op MLsub, MLpair($1, $3)) }
-  | expression TIMES expression             { Apply (Op MLmult, MLpair($1, $3)) }
-  | expression DIV expression               { Apply (Op MLdiv, MLpair($1, $3)) }
-  | expression LT expression               { Apply (Op MLlt, MLpair($1, $3)) }
-  | expression GT expression               { Apply (Op MLgt, MLpair($1, $3)) }
-  | expression EQ expression               { Apply (Op MLeq, MLpair($1, $3)) } 
-  | expression LEQ expression              { Apply (Op MLleq, MLpair($1, $3)) }
-  | expression GEQ expression              { Apply (Op MLgeq, MLpair($1, $3)) }
-  | FST expression { Apply (MLfst, $2) }
-  | SND expression { Apply (MLsnd, $2) }
+  | expression PLUS expression                      { Apply (Op MLadd, MLpair($1, $3)) }
+  | expression MINUS expression                     { Apply (Op MLsub, MLpair($1, $3)) }
+  | expression TIMES expression                     { Apply (Op MLmult, MLpair($1, $3)) }
+  | expression DIV expression                       { Apply (Op MLdiv, MLpair($1, $3)) }
+  | expression LT expression                        { Apply (Op MLlt, MLpair($1, $3)) }
+  | expression GT expression                        { Apply (Op MLgt, MLpair($1, $3)) }
+  | expression EQ expression                        { Apply (Op MLeq, MLpair($1, $3)) } 
+  | expression LEQ expression                       { Apply (Op MLleq, MLpair($1, $3)) }
+  | expression GEQ expression                       { Apply (Op MLgeq, MLpair($1, $3)) }
+  | expression EQEQ expression                      { Apply (Op MLeqeq, MLpair($1, $3)) }
+  | FST expression                                  { Apply (MLfst, $2) }
+  | SND expression                                  { Apply (MLsnd, $2) }
 
 ;
 
 pat:
-  | LPAREN pat RPAREN                        { $2 }
-  | IDENT                                    { Identpat($1) }
-  | LPAREN RPAREN                            { Nullpat } 
-  | LPAREN pat COMMA pat RPAREN              { Pairpat($2,$4) }
+  | LPAREN pat RPAREN                                { $2 }
+  | IDENT                                            { Identpat($1) }
+  | LPAREN RPAREN                                    { Nullpat } 
+  | LPAREN pat COMMA pat RPAREN                      { Pairpat($2,$4) }
 ;

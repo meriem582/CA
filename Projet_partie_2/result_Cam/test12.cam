@@ -1,1 +1,1 @@
-[Push; Quote 5; Cons; Push; Car; Swap; Quote 2; Cons; Add]
+[Push; Quote 5; Cons; Push; Cdr; Swap; Quote 2; Cons; Add]

@@ -22,6 +22,7 @@ rule token = parse
   | "fst"               { FST }
   | "snd"               { SND }
   | "="                { EQ }
+  | "=="               { EQEQ }
   | '+'                { PLUS }
   | '-'                { MINUS }
   | '*'                { TIMES }
@@ -30,8 +31,7 @@ rule token = parse
   | ">"                { GT }
   | "<="               { LEQ }
   | ">="               { GEQ }
-
-  
+  | "->"               { RIGHT_ARROW }
   | ident as x         { IDENT(x) }
   | "->"               { RIGHT_ARROW }
   | ['\n' ]            { (Lexing.new_line lexbuf) ; (token lexbuf) }

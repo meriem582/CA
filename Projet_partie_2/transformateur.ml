@@ -6,7 +6,7 @@ let rec access id = function
   | Nullpat -> failwith "nullpat"
   | Identpat x -> if x = id then [] else failwith "not found"
   | Pairpat (p1, p2) ->
-    (try Car :: access id p2 with Failure _ -> Cdr :: access id p1)
+    (try Cdr :: access id p2 with Failure _ -> Car :: access id p1)
 
 let rec compile pat = function
   | Number n -> [Quote (Int n)]
@@ -14,7 +14,7 @@ let rec compile pat = function
   | Ident v -> access v pat
   | If (e1, e2, e3) ->
     [Push] @ compile pat e1 @
-    [Branch (compile pat e2 @ [Return], compile pat e3 @ [Return])]
+    [Branch (compile pat e2 , compile pat e3)]
   | MLpair (e1, e2) ->
     [Push] @ compile pat e1 @ [Swap] @ compile pat e2 @ [Cons]
   | MLin (Let (p, e1), e2) ->
@@ -26,11 +26,11 @@ let rec compile pat = function
     [Swap; Rplac] @ compile newpat e2
   | Lambda (p, e) ->
     let newpat = Pairpat (pat, p) in
-    [Cur (compile newpat e @ [Return])]
+    [Cur (compile newpat e )]
   | Apply (e1, e2) ->
     if is_constant e1 then compile pat e2 @ trans_constant e1
     else [Push] @ compile pat e1 @ [Swap] @ compile pat e2 @ [Cons; App]
-  | e when is_constant e -> [Cur (Car :: trans_constant e)]
+  | e when is_constant e -> [Cur (Cdr :: trans_constant e)]
   | _ -> failwith "compile"
 
 and is_constant = function
@@ -42,6 +42,7 @@ and is_constant = function
   | Op MLgt
   | Op MLeq
   | Op MLleq
+  | Op MLeqeq
   | Op MLgeq
   | MLfst 
   | MLsnd -> true
@@ -55,10 +56,11 @@ and trans_constant = function
   | Op MLlt -> [Opc Lt]
   | Op MLgt -> [Opc Gt]
   | Op MLeq -> [Opc Eq]
+  | Op MLeqeq -> [Opc Eqeq]
   | Op MLleq -> [Opc Leq]
   | Op MLgeq ->  [Opc Geq]
-  | MLfst -> [Cdr]
-  | MLsnd -> [Car]
+  | MLfst -> [Car]
+  | MLsnd -> [Cdr]
   | _ -> failwith "trans_constant"
 
 let run e =
@@ -71,6 +73,7 @@ let run e =
     | Quote _ -> "Quote <complex>"
     | Opc Add -> "Add"
     | Opc Eq -> "Eq"
+    | Opc Eqeq -> "Eqeq"
     | Opc Sub -> "Sub"
     | Opc Mult -> "Mult"
     | Opc Div -> "Div"
@@ -84,7 +87,6 @@ let run e =
     | Rplac -> "Rplac"
     | Push -> "Push"
     | Swap -> "Swap"
-    | Return -> "Return"
     | App -> "App"
     | Cur cs -> "Cur [" ^ (String.concat "; " (List.map string_of_com cs)) ^ "]"
     | Branch (c1, c2) ->
