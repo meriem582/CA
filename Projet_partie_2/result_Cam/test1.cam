@@ -1,1 +1,1 @@
-[Push; Quote Null; Cons; Push; Cur [Push; Push; Cdr; Swap; Quote 0; Cons; Eqeq; Branch [Quote 1] [Push; Cdr; Swap; Push; Car; Cdr; Swap; Push; Cdr; Swap; Quote 1; Cons; Sub; Cons; App; Cons; Mult]]; Swap; Rplac; Push; Cdr; Swap; Quote 4; Cons; App]
+[Push; Quote Null; Cons; Push; Cur [Push; Push; Cdr; Swap; Quote 0; Cons; Eq; Branch [Quote 1] [Push; Cdr; Swap; Push; Car; Cdr; Swap; Push; Cdr; Swap; Quote 1; Cons; Sub; Cons; App; Cons; Mult]]; Swap; Rplac; Push; Cdr; Swap; Quote 4; Cons; App]

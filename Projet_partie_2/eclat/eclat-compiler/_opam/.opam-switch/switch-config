@@ -1,0 +1,11 @@
+opam-version: "2.0"
+synopsis: "/mnt/c/Users/merie/Desktop/eclatMA/eclat/eclat-compiler"
+opam-root: "/home/meriem/.opam"
+invariant: ["ocaml-base-compiler" {= "4.14.1"} | "ocaml-system" {= "4.14.1"}]
+paths {
+  
+}
+variables {
+  user: "meriem"
+  group: "meriem"
+}

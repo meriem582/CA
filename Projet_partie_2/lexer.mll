@@ -22,7 +22,6 @@ rule token = parse
   | "fst"               { FST }
   | "snd"               { SND }
   | "="                { EQ }
-  | "=="               { EQEQ }
   | '+'                { PLUS }
   | '-'                { MINUS }
   | '*'                { TIMES }

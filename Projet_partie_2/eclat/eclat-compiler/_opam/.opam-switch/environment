@@ -1,0 +1,3 @@
+OPAM_SWITCH_PREFIX	=	/mnt/c/Users/merie/Desktop/eclatMA/eclat/eclat-compiler/_opam	Prefix\ of\ the\ current\ opam\ switch
+MANPATH	=:	/mnt/c/Users/merie/Desktop/eclatMA/eclat/eclat-compiler/_opam/man	Current\ opam\ switch\ man\ dir
+PATH	=+=	/mnt/c/Users/merie/Desktop/eclatMA/eclat/eclat-compiler/_opam/bin	Binary\ dir\ for\ opam\ switch\ /mnt/c/Users/merie/Desktop/eclatMA/eclat/eclat-compiler

@@ -42,7 +42,6 @@ and is_constant = function
   | Op MLgt
   | Op MLeq
   | Op MLleq
-  | Op MLeqeq
   | Op MLgeq
   | MLfst 
   | MLsnd -> true
@@ -56,7 +55,6 @@ and trans_constant = function
   | Op MLlt -> [Opc Lt]
   | Op MLgt -> [Opc Gt]
   | Op MLeq -> [Opc Eq]
-  | Op MLeqeq -> [Opc Eqeq]
   | Op MLleq -> [Opc Leq]
   | Op MLgeq ->  [Opc Geq]
   | MLfst -> [Car]
@@ -73,7 +71,6 @@ let run e =
     | Quote _ -> "Quote <complex>"
     | Opc Add -> "Add"
     | Opc Eq -> "Eq"
-    | Opc Eqeq -> "Eqeq"
     | Opc Sub -> "Sub"
     | Opc Mult -> "Mult"
     | Opc Div -> "Div"

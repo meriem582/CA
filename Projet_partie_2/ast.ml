@@ -19,7 +19,7 @@ type expr =
   | MLfst 
   | MLsnd
 
-and operatorML = MLadd| MLsub| MLmult| MLdiv| MLlt| MLgt| MLeq| MLleq| MLgeq | MLeqeq
+and operatorML = MLadd| MLsub| MLmult| MLdiv| MLlt| MLgt| MLeq| MLleq| MLgeq 
 
 and dec =
   | Let of pat * expr
@@ -39,7 +39,7 @@ type com =
   | Cur of coms
   | Branch of coms * coms
 
-and operator = Add | Sub | Mult | Div | Lt | Gt | Eq | Leq | Geq | Eqeq
+and operator = Add | Sub | Mult | Div | Lt | Gt | Eq | Leq | Geq 
 
 
 and value =
@@ -55,3 +55,18 @@ and coms = com list
 type stackelem = Val of value | Code of coms
 type stack = stackelem list
 type config = value ref * coms * stack
+
+
+(* Type des commandes CAM aplaties *)
+type flat_com =
+  | FQuote of value
+  | FOpc of operator
+  | FCdr
+  | FCar
+  | FCons
+  | FPush
+  | FSwap
+  | FApp
+  | FRplac
+  | FCur of int
+  | FBranch of int * int

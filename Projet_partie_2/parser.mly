@@ -2,7 +2,7 @@
 open Ast
 %}
  
-%token LET IN IF THEN ELSE FUN EQ FST SND EQEQ
+%token LET IN IF THEN ELSE FUN EQ FST SND
 %token LT GT LEQ GEQ
 
 
@@ -56,7 +56,6 @@ expression :
   | expression EQ expression                        { Apply (Op MLeq, MLpair($1, $3)) } 
   | expression LEQ expression                       { Apply (Op MLleq, MLpair($1, $3)) }
   | expression GEQ expression                       { Apply (Op MLgeq, MLpair($1, $3)) }
-  | expression EQEQ expression                      { Apply (Op MLeqeq, MLpair($1, $3)) }
   | FST expression                                  { Apply (MLfst, $2) }
   | SND expression                                  { Apply (MLsnd, $2) }
 
